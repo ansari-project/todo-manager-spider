@@ -60,6 +60,8 @@ The current conversational interface has critical limitations:
   2. Server maintains MCP client instance with tool execution history
   3. Implement agentic loop for multi-step operations
 
+<!-- OK let's do this one -->
+
 ### Agentic Loop Design
 
 ```typescript
@@ -97,6 +99,8 @@ while (needsMoreActions && iterations < 5) {
   iterations++
 }
 ```
+
+<!-- You can be more flexible for now -- you can include the whole conversation-->
 
 #### 3. Enhanced System Prompt
 ```
@@ -137,6 +141,9 @@ interface ChatResponse {
   thoughts?: string[]       // Claude's reasoning (optional debug info)
 }
 ```
+
+<!-- I also think we need to make improvements to the UI. WE need to scroll to the bottom, we need 
+to show that we are thinking -->
 
 ### Implementation Phases
 
@@ -181,6 +188,7 @@ interface ChatResponse {
    - Sliding window with token counting (6-8k max)
    - Include last 2-3 messages + rolling summary if over budget
    - Server computes actual token cost
+<!-- Don't care about this -->
 
 2. **Infinite Loops**:
    - Hard limit of 3-5 iterations per request
@@ -278,3 +286,5 @@ Based on consultation, prioritize:
    - Observability and tracing
    - Idempotency and preview modes
    - Performance optimization
+
+<!-- we said no time sizes. Also how come no Gem Pro consultation? -->
