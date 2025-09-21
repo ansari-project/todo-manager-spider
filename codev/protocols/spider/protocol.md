@@ -222,10 +222,12 @@ Execute for each phase in the plan. This is a strict cycle that must be complete
 
 **CRITICAL PRECONDITION**: Before starting any phase, verify the previous phase was committed to git. No phase can begin without the prior phase's commit.
 
+**⚠️ MANDATORY**: The I-D-E cycle MUST be completed for EACH PHASE, not just at the end of all phases. Skipping D (Defend) or E (Evaluate) for any phase is a PROTOCOL VIOLATION.
+
 **Phase Completion Process**:
 1. **Implement** - Build the code for this phase
-2. **Defend** - Write comprehensive tests that guard functionality
-3. **Evaluate** - Assess and discuss with user
+2. **Defend** - Write comprehensive tests IMMEDIATELY (not retroactively)
+3. **Evaluate** - Get multi-agent review and user assessment
 4. **Commit** - Single atomic commit for the phase (MANDATORY before next phase)
 5. **Proceed** - Move to next phase only after commit
 
@@ -294,9 +296,12 @@ Execute for each phase in the plan. This is a strict cycle that must be complete
 
 **Purpose**: Create comprehensive automated tests that safeguard intended behavior and prevent regressions.
 
+**CRITICAL**: Tests must be written IMMEDIATELY after implementation, NOT retroactively at the end of all phases. This is MANDATORY.
+
 **Requirements**:
 1. **Defensive Test Creation**
    - Write unit tests for all new functions
+   - Tests must be written ALONGSIDE implementation, not after
    - Create integration tests for feature flows
    - Develop edge case coverage
    - Build error condition tests
