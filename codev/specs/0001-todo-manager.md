@@ -20,7 +20,7 @@ export const todos = sqliteTable('todos', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   title: text('title', { length: 200 }).notNull(),
   description: text('description', { length: 1000 }),
-  priority: text('priority').notNull().default('medium'), // CHECK constraint added separately
+  priority: text('priority').notNull().default('medium'),
   dueDate: integer('due_date', { mode: 'timestamp' }),
   status: text('status').notNull().default('pending'),
   createdAt: integer('created_at', { mode: 'timestamp' }).defaultNow(),
@@ -57,6 +57,10 @@ export const todos = pgTable('todos', {
 // Unified type exports (works with either schema)
 export type Todo = typeof todos.$inferSelect;
 export type NewTodo = typeof todos.$inferInsert;
+
+// SQLite CHECK constraints (add in migration)
+// ALTER TABLE todos ADD CONSTRAINT chk_priority CHECK (priority IN ('low','medium','high'));
+// ALTER TABLE todos ADD CONSTRAINT chk_status CHECK (status IN ('pending','completed'));
 ```
 
 ### Functional Requirements
@@ -102,10 +106,14 @@ export type NewTodo = typeof todos.$inferInsert;
 - **Database**: Drizzle ORM with dual support:
   - **Local Development**: SQLite (`todos.db`)
   - **Production**: PostgreSQL (via DATABASE_URL)
-- **Automatic migrations**: Drizzle Kit for schema management
+- **Connection Strategy**:
+  - **Node Runtime**: pg Pool with connection reuse
+  - **Edge/Serverless**: Neon HTTP driver (@neondatabase/serverless)
+- **Migration Strategy**: Separate migration sets per dialect
+  - SQLite: `drizzle/sqlite/` directory
+  - PostgreSQL: `drizzle/postgres/` directory
 - **Type-safe queries**: Full TypeScript integration
-- **Connection pooling**: Built-in for PostgreSQL
-- **Maximum**: ~10,000 todos (increased from 500)
+- **Maximum**: ~10,000 todos
 
 #### User Experience
 - Responsive design (mobile, tablet, desktop)
@@ -129,8 +137,16 @@ POST   /api/conversation   - Process natural language command (rate limited: 10/
 - Title: required, 1-200 chars
 - Description: optional, max 1000 chars
 - Priority: enum ['low', 'medium', 'high']
-- DueDate: ISO 8601 format validation
+- DueDate: ISO 8601 string → Date conversion (stored as UTC)
 - Server-generated: id (UUID), createdAt, updatedAt timestamps
+- **Environment validation** on startup:
+  ```typescript
+  const envSchema = z.object({
+    NODE_ENV: z.enum(['development', 'production']),
+    DATABASE_URL: z.string().optional(),
+    ANTHROPIC_API_KEY: z.string()
+  });
+  ```
 
 ### Conversational Interface
 
@@ -161,7 +177,7 @@ POST   /api/conversation   - Process natural language command (rate limited: 10/
 
 ### Must Have
 - [ ] All CRUD operations work via both UI and conversational interface
-- [ ] Todos persist to flat file storage
+- [ ] Todos persist to database (SQLite in dev, PostgreSQL in prod)
 - [ ] Priority levels with visual indicators
 - [ ] Due date support with overdue highlighting
 - [ ] Status toggling (pending/completed)
