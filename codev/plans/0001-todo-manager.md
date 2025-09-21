@@ -13,22 +13,22 @@ Building a Todo Manager with dual interfaces (traditional UI and LLM-powered con
 
 ### 1.2 Install Core Dependencies
 ```bash
-# Database dependencies
+# Database dependencies - SQLite only initially
 npm install drizzle-orm better-sqlite3
 npm install -D drizzle-kit @types/better-sqlite3
 
-# For production (PostgreSQL)
-npm install pg @neondatabase/serverless
-npm install -D @types/pg
-
-# Core dependencies
-npm install zod date-fns zustand @modelcontextprotocol/sdk
+# Core dependencies (no Zustand - using useState)
+npm install zod date-fns @modelcontextprotocol/sdk
 npm install @anthropic-ai/sdk express-rate-limit
 
 # UI dependencies (shadcn/ui)
 npm install tailwindcss-animate class-variance-authority clsx tailwind-merge
 npm install @radix-ui/react-dialog @radix-ui/react-label @radix-ui/react-slot
 npx shadcn-ui@latest init
+
+# Testing dependencies
+npm install -D vitest @testing-library/react @testing-library/user-event
+npm install -D @vitejs/plugin-react jsdom
 
 # Dev dependencies
 npm install -D @types/node dotenv-cli
@@ -54,14 +54,10 @@ todo-manager/
 │   ├── layout.tsx
 │   └── page.tsx
 ├── db/
-│   ├── schema.sqlite.ts      # SQLite schema
-│   ├── schema.postgres.ts    # PostgreSQL schema
-│   ├── schema.ts            # Auto-selected schema export
+│   ├── schema.ts            # SQLite schema
 │   ├── client.ts            # Database connection
 │   └── migrate.ts           # Migration runner
-├── drizzle/
-│   ├── sqlite/              # SQLite migrations
-│   └── postgres/            # PostgreSQL migrations
+├── drizzle/                 # SQLite migrations
 ├── lib/
 │   ├── mcp/
 │   │   ├── server.ts        # MCP server setup
@@ -70,38 +66,33 @@ todo-manager/
 │   │   └── schemas.ts       # Zod schemas
 │   └── types/
 │       └── todo.ts
-├── drizzle.config.sqlite.ts  # SQLite config
-├── drizzle.config.postgres.ts # PostgreSQL config
-└── .env.local               # DATABASE_URL, ANTHROPIC_API_KEY
+├── drizzle.config.ts        # SQLite config
+├── tests/                   # Test files
+│   ├── api/                 # API route tests
+│   ├── components/          # Component tests
+│   └── setup.ts             # Test setup
+└── .env.local               # ANTHROPIC_API_KEY
 ```
 
-## Phase 2: Database Layer Implementation
+## Phase 2: Database Layer Implementation (SQLite Only)
 
 ### 2.1 Database Setup
 - [ ] Create SQLite schema with indexes
-- [ ] Create PostgreSQL schema with enums and indexes
-- [ ] Set up auto-schema selection based on DATABASE_URL
-- [ ] Configure Drizzle configs for both databases
+- [ ] Configure Drizzle config for SQLite
 - [ ] Add environment validation with Zod
-
-<!-- What if we get everything working with sqlite first, and then add postgres as a near-final stage? -->
+- [ ] Write tests for schema validation
 
 ### 2.2 Database Client
-- [ ] Implement connection logic:
-  - SQLite for local development
-  - PostgreSQL with pg Pool for Node runtime
-  - Neon HTTP driver for Edge runtime
-- [ ] Add connection pooling for PostgreSQL
-
-<!-- Do we need connection pooling? -->
+- [ ] Implement SQLite connection logic
 - [ ] Create global singleton for database instance
+- [ ] Write tests for database connection
 
 ### 2.3 Migrations
 - [ ] Generate initial migrations for SQLite
-- [ ] Generate initial migrations for PostgreSQL
 - [ ] Add CHECK constraints for SQLite enums
 - [ ] Create migration runner script
 - [ ] Test rollback procedures
+- [ ] Write tests for migration logic
 
 ### 2.4 Type Definitions & Validation
 - [ ] Export unified Todo types from schema
@@ -144,12 +135,11 @@ todo-manager/
 ## Phase 4: UI Development with shadcn/ui
 
 ### 4.1 State Management
-- [ ] Set up Zustand store
-
-<!-- Tell me more about zustand so we can decide if we need it. -->
-- [ ] Define actions (CRUD operations)
+- [ ] Use React useState for local component state
+- [ ] Implement data fetching with native fetch
 - [ ] Server as source of truth
 - [ ] Optimistic updates for better UX
+- [ ] Write tests for state management
 
 ### 4.2 shadcn/ui Components Setup
 - [ ] Install and configure shadcn/ui
@@ -159,22 +149,27 @@ todo-manager/
   - Checkbox, Select
   - Toast/Sonner for notifications
 
-### 4.3 Core Components
-- [ ] TodoList with clean layout
+### 4.3 Core Components (Split View Layout)
+- [ ] Main layout with 2/3 top for todos, 1/3 bottom for chat
+- [ ] TodoList with clean layout (upper section)
 - [ ] TodoItem with checkbox and actions
 - [ ] TodoForm with validation
 - [ ] FilterBar (status, priority)
 - [ ] Simple sorting controls
+- [ ] ConversationalInterface component (lower section)
+- [ ] Resizable divider between sections (optional)
+- [ ] Write component tests for each
 
 ### 4.4 UI Features
+- [ ] Split view: todos (top 2/3), chat (bottom 1/3)
 - [ ] Priority color coding (low/medium/high)
 - [ ] Due date display
 - [ ] Overdue highlighting
 - [ ] Loading states
 - [ ] Error handling
 - [ ] Responsive design (mobile/tablet/desktop)
-
-<!-- How are oyu thinking about the conversation interface? Are you thinking of having it in the same page? -->
+- [ ] Minimum height constraints for both sections
+- [ ] Write tests for UI interactions
 
 ## Phase 5: MCP Server & LLM Integration
 
@@ -206,27 +201,25 @@ todo-manager/
 - [ ] Error messages with fallback options
 - [ ] Confirmation dialogs for destructive operations
 
-## Phase 6: Testing & Deployment Preparation
+## Phase 6: PostgreSQL Support (Final Step)
 
+### 6.1 PostgreSQL Schema
+- [ ] Create PostgreSQL schema file (schema.postgres.ts)
+- [ ] Add proper enums for PostgreSQL
+- [ ] Configure connection logic for DATABASE_URL
+- [ ] Write tests for PostgreSQL operations
 
-<!-- We should be writing tests as we go. Do we need to have this special testing phase? -->
+### 6.2 Database Abstraction
+- [ ] Implement schema auto-selection based on DATABASE_URL
+- [ ] Add PostgreSQL dependencies (pg, @neondatabase/serverless)
+- [ ] Test switching between SQLite and PostgreSQL
+- [ ] Update migration scripts for dual database support
 
-### 6.1 Core Testing
-- [ ] Storage manager tests (atomic writes, locking)
-- [ ] API endpoint tests with Zod validation
-- [ ] Concurrent write tests
-- [ ] Corrupt file recovery tests
-
-### 6.2 MCP & LLM Testing
-- [ ] Mock MCP server tests
-- [ ] Tool selection verification
-- [ ] Confirmation flow tests
-- [ ] Error handling tests
-
-### 6.3 Manual Testing
-- [ ] UI functionality across devices
-- [ ] Conversational interface testing
-- [ ] Edge cases and error scenarios
+### 6.3 Production Testing
+- [ ] Test PostgreSQL connection on Vercel
+- [ ] Verify Neon/Supabase integration
+- [ ] Load testing with PostgreSQL
+- [ ] Document deployment configurations
 
 ## Deployment Configuration
 
@@ -239,23 +232,23 @@ todo-manager/
 
 ### Deployment Options
 
-#### Option 1: Local/VPS with SQLite
+#### Option 1: Development/Local with SQLite
 - [ ] No DATABASE_URL needed
 - [ ] SQLite file created automatically
-- [ ] Run migrations: `npm run db:migrate:sqlite`
+- [ ] Run migrations: `npm run db:migrate`
+- [ ] Start server: `npm run dev`
+
+#### Option 2: Production (After Phase 6)
+##### VPS/Railway with SQLite
+- [ ] Use persistent volume for database file
+- [ ] Run migrations: `npm run db:migrate`
 - [ ] Start server: `npm run start`
 
-#### Option 2: Serverless (Vercel) with PostgreSQL
+##### Serverless (Vercel) with PostgreSQL
 - [ ] Set DATABASE_URL to PostgreSQL connection string
 - [ ] Use Neon, Supabase, or Vercel Postgres
-- [ ] Run migrations in CI/CD: `npm run db:migrate:postgres`
+- [ ] Run migrations in CI/CD: `npm run db:migrate`
 - [ ] Deploy: `vercel deploy`
-
-#### Option 3: Docker Container
-- [ ] Create Dockerfile with Node.js base
-- [ ] Choose SQLite or PostgreSQL via DATABASE_URL
-- [ ] Run migrations on container start
-- [ ] Configure environment variables
 
 ## Key Implementation Decisions
 
@@ -292,8 +285,9 @@ todo-manager/
 | Separate schemas | Optimal for each database dialect |
 
 ## Implementation Priority
-1. **Database setup with Drizzle** - Foundation must be solid
-2. **Basic CRUD API** - Core functionality first
-3. **UI with shadcn** - User-facing interface
+1. **SQLite database setup** - Simple foundation first
+2. **Basic CRUD API with tests** - Core functionality with validation
+3. **Split-view UI with shadcn** - Todos on top, chat on bottom
 4. **MCP server setup** - Tool definitions for LLM
-5. **LLM integration** - Conversational interface last
+5. **LLM integration** - Conversational interface
+6. **PostgreSQL support** - Production database last
