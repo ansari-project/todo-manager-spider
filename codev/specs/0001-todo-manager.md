@@ -62,12 +62,15 @@ interface Todo {
 ### Non-Functional Requirements
 
 #### Performance
-- Reasonable response times
-- Simple caching where needed
+- Reasonable response times for ~500 todos
+- Direct file reads (no caching needed)
 
 #### Storage
 - JSON flat file: `data/todos.json`
-- Simple file read/write operations
+- **Atomic writes**: Write to temp file then rename for safety
+- **File locking**: Using `proper-lockfile` to prevent concurrent corruption
+- **Bootstrap**: Auto-create data directory and empty file on first run
+- **Backup**: Maintain `todos.json.bak` for recovery
 - Maximum ~500 todos
 
 #### User Experience
@@ -77,28 +80,38 @@ interface Todo {
 
 ### API Endpoints
 ```
-POST   /api/todos          - Create new todo
+POST   /api/todos          - Create new todo (with Zod validation)
 GET    /api/todos          - List todos (with query filters)
 GET    /api/todos/:id      - Get single todo
-PUT    /api/todos/:id      - Update todo
+PUT    /api/todos/:id      - Update todo (with validation)
 DELETE /api/todos/:id      - Delete todo
 POST   /api/todos/:id/toggle - Toggle completion status
 
-POST   /api/conversation   - Process natural language command
+POST   /api/conversation   - Process natural language command (rate limited: 10/min)
 ```
+
+#### Input Validation
+- **Zod schemas** for all request payloads
+- Title: required, 1-200 chars
+- Description: optional, max 1000 chars
+- Priority: enum ['low', 'medium', 'high']
+- DueDate: ISO 8601 format validation
+- Server-generated: id (UUID), createdAt, updatedAt timestamps
 
 ### Conversational Interface
 
-#### LLM Integration
-- **Claude Sonnet** for natural language understanding
-- CRUD operations exposed as tools/functions
-- Flexible interpretation - no rigid command patterns
-- Natural conversation flow with context awareness
-- The LLM can:
-  - Understand varied phrasings and intentions
-  - Handle bulk operations
-  - Provide helpful suggestions
-  - Add creative elements (like emojis) when requested
+#### LLM Integration via MCP
+- **MCP Server** exposes CRUD operations as tools to Claude
+- **Tool Schemas** with explicit input validation:
+  - `create_todo`: title (required), description, priority, dueDate
+  - `list_todos`: filter by status/priority/date
+  - `update_todo`: id + fields to update
+  - `delete_todo`: id with confirmation required
+  - `bulk_update_preview`: preview changes before applying
+  - `apply_bulk_update`: requires explicit confirmation
+- **Confirmation Flow**: Preview → Confirm → Apply for destructive/bulk operations
+- **Error Handling**: Timeouts (15s), retries with backoff, fallback to manual UI
+- **Security**: ANTHROPIC_API_KEY via environment variables, server-only calls
 
 ## User Stories
 
@@ -138,6 +151,9 @@ POST   /api/conversation   - Process natural language command
 - Must store data in JSON flat file
 - No external database dependencies
 - Minimal external API dependencies
+- **Deployment**: Requires persistent filesystem (no serverless/Vercel Edge)
+  - Deploy to: VPS, Docker container, or standalone Node.js server
+  - NOT compatible with ephemeral filesystems
 
 ## Success Metrics
 - All CRUD operations functional in both interfaces
@@ -158,16 +174,17 @@ POST   /api/conversation   - Process natural language command
 - TypeScript 5+
 - Node.js 18+
 - File system access (Node.js fs module)
+- proper-lockfile (for concurrent write protection)
+- zod (for input validation)
 - date-fns (for date parsing)
 - Zustand (for state management)
-- Anthropic SDK (for Claude Sonnet integration)
+- @modelcontextprotocol/sdk (for MCP server)
+- Anthropic SDK (for Claude integration)
 
-## UI Framework Options
-**Need to discuss:** What would you prefer for the UI?
-- **Option 1: Tailwind CSS** - Utility-first, highly customizable
-- **Option 2: shadcn/ui** - Beautiful components built on Radix + Tailwind
-- **Option 3: Material-UI (MUI)** - Full component library
-- **Option 4: Plain CSS/modules** - Simple, no dependencies
+## UI Framework
+- **shadcn/ui** - Beautiful, accessible components built on Radix UI + Tailwind CSS
+- Component-based approach with full customization control
+- Includes form components, dialogs, and other UI primitives needed for the app
 
 ## Testing Strategy
 - **Unit Tests**: Basic tests for core functionality
