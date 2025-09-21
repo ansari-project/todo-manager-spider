@@ -52,6 +52,7 @@ This is a Todo Manager application built using the SPIDER protocol methodology w
 ### Technical Decisions
 1. **Database Over Flat Files**: Solves concurrency, locking, and scalability issues
 2. **Drizzle ORM**: Provides type safety and database abstraction for dual SQLite/PostgreSQL support
+   - See [Drizzle ORM Implementation Guide](codev/resources/drizzle-orm-guide.md) for detailed explanation
 3. **MCP for LLM Tools**: Clean separation between tool definitions and implementation
 4. **Split View UI**: Todos on top (2/3), chat on bottom (1/3) for optimal screen usage
 
@@ -86,3 +87,7 @@ Set `ANTHROPIC_API_KEY` in `.env.local` for conversational interface functionali
 - **Serverless (Vercel)**: Use PostgreSQL, not SQLite
 - **VPS (Railway)**: Both SQLite and PostgreSQL supported with persistent volumes
 - **MCP Server**: Requires separate process management in production
+
+## Technical Resources
+- [Drizzle ORM Implementation Guide](codev/resources/drizzle-orm-guide.md) - Database abstraction approach
+- [SPIDER Protocol](codev/protocols/spider/protocol.md) - Development methodology
