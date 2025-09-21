@@ -1,7 +1,7 @@
 # Implementation Plan: Todo Manager Application
 
 ## Overview
-Building a simplified Todo Manager with dual interfaces (traditional UI and LLM-powered conversational interface) using MCP for tool integration.
+Building a Todo Manager with dual interfaces (traditional UI and LLM-powered conversational interface) using Drizzle ORM for database abstraction and MCP for LLM tool integration.
 
 ## Phase 1: Project Setup and Foundation
 
@@ -13,8 +13,16 @@ Building a simplified Todo Manager with dual interfaces (traditional UI and LLM-
 
 ### 1.2 Install Core Dependencies
 ```bash
+# Database dependencies
+npm install drizzle-orm better-sqlite3
+npm install -D drizzle-kit @types/better-sqlite3
+
+# For production (PostgreSQL)
+npm install pg @neondatabase/serverless
+npm install -D @types/pg
+
 # Core dependencies
-npm install proper-lockfile zod date-fns zustand @modelcontextprotocol/sdk
+npm install zod date-fns zustand @modelcontextprotocol/sdk
 npm install @anthropic-ai/sdk express-rate-limit
 
 # UI dependencies (shadcn/ui)
@@ -23,7 +31,7 @@ npm install @radix-ui/react-dialog @radix-ui/react-label @radix-ui/react-slot
 npx shadcn-ui@latest init
 
 # Dev dependencies
-npm install -D @types/node @types/proper-lockfile
+npm install -D @types/node dotenv-cli
 ```
 
 ### 1.3 Project Structure
@@ -45,61 +53,89 @@ todo-manager/
 │   │   └── ConversationalInterface.tsx
 │   ├── layout.tsx
 │   └── page.tsx
+├── db/
+│   ├── schema.sqlite.ts      # SQLite schema
+│   ├── schema.postgres.ts    # PostgreSQL schema
+│   ├── schema.ts            # Auto-selected schema export
+│   ├── client.ts            # Database connection
+│   └── migrate.ts           # Migration runner
+├── drizzle/
+│   ├── sqlite/              # SQLite migrations
+│   └── postgres/            # PostgreSQL migrations
 ├── lib/
-│   ├── storage/
-│   │   └── fileManager.ts    # Atomic writes, locking, backup
 │   ├── mcp/
-│   │   ├── server.ts         # MCP server setup
-│   │   └── tools.ts          # Tool definitions
+│   │   ├── server.ts        # MCP server setup
+│   │   └── tools.ts         # Tool definitions
 │   ├── validation/
-│   │   └── schemas.ts        # Zod schemas
+│   │   └── schemas.ts       # Zod schemas
 │   └── types/
 │       └── todo.ts
-├── data/
-│   └── .gitkeep
-└── .env.local                # ANTHROPIC_API_KEY
+├── drizzle.config.sqlite.ts  # SQLite config
+├── drizzle.config.postgres.ts # PostgreSQL config
+└── .env.local               # DATABASE_URL, ANTHROPIC_API_KEY
 ```
 
-## Phase 2: Data Layer Implementation
+## Phase 2: Database Layer Implementation
 
-### 2.1 Type Definitions & Validation
-- [ ] Create Todo interface with all fields
+### 2.1 Database Setup
+- [ ] Create SQLite schema with indexes
+- [ ] Create PostgreSQL schema with enums and indexes
+- [ ] Set up auto-schema selection based on DATABASE_URL
+- [ ] Configure Drizzle configs for both databases
+- [ ] Add environment validation with Zod
+
+### 2.2 Database Client
+- [ ] Implement connection logic:
+  - SQLite for local development
+  - PostgreSQL with pg Pool for Node runtime
+  - Neon HTTP driver for Edge runtime
+- [ ] Add connection pooling for PostgreSQL
+- [ ] Create global singleton for database instance
+
+### 2.3 Migrations
+- [ ] Generate initial migrations for SQLite
+- [ ] Generate initial migrations for PostgreSQL
+- [ ] Add CHECK constraints for SQLite enums
+- [ ] Create migration runner script
+- [ ] Test rollback procedures
+
+### 2.4 Type Definitions & Validation
+- [ ] Export unified Todo types from schema
 - [ ] Define Zod schemas for validation:
   - TodoCreateSchema
   - TodoUpdateSchema
   - TodoFilterSchema
-- [ ] Define API request/response types
-
-### 2.2 File Storage Manager
-- [ ] Implement atomic write with temp file + rename
-- [ ] Add proper-lockfile integration
-- [ ] Create backup mechanism (todos.json.bak)
-- [ ] Bootstrap: create data dir and empty file on first run
-- [ ] Handle corrupt JSON gracefully (restore from backup)
-- [ ] Max 500 todos limit enforcement
+  - EnvironmentSchema
+- [ ] Add ISO 8601 → Date conversion for timestamps
 
 ## Phase 3: API Development
 
 ### 3.1 Core CRUD Endpoints
 - [ ] POST /api/todos - Create with Zod validation
-- [ ] GET /api/todos - List with filtering/sorting
+- [ ] GET /api/todos - List with filtering/sorting using Drizzle queries
 - [ ] GET /api/todos/:id - Single todo retrieval
-- [ ] PUT /api/todos/:id - Update with validation
+- [ ] PUT /api/todos/:id - Update with validation and auto-updatedAt
 - [ ] DELETE /api/todos/:id - Delete with confirmation
-- [ ] POST /api/todos/:id/toggle - Status toggling
+- [ ] POST /api/todos/:id/toggle - Status toggling with completedAt
 
-### 3.2 Conversation Endpoint
+### 3.2 Database Operations
+- [ ] Implement type-safe queries with Drizzle
+- [ ] Add proper error handling for database operations
+- [ ] Use transactions where needed
+- [ ] Ensure updatedAt updates on every modification
+
+### 3.3 Conversation Endpoint
 - [ ] POST /api/conversation - Rate limited (10 req/min)
 - [ ] Integrate with MCP server
 - [ ] Error handling for LLM failures
 - [ ] Timeout and retry logic
 
-### 3.3 Input Validation
+### 3.4 Input Validation
 - [ ] Server-generated UUIDs for IDs
 - [ ] Server-generated timestamps
 - [ ] Title length validation (1-200 chars)
 - [ ] Priority enum validation
-- [ ] Date format validation
+- [ ] UTC timestamp conversion
 
 ## Phase 4: UI Development with shadcn/ui
 
@@ -184,35 +220,40 @@ todo-manager/
 ## Deployment Configuration
 
 ### Environment Setup
-- [ ] Configure .env.local with ANTHROPIC_API_KEY
-- [ ] Set up data directory with proper permissions
+- [ ] Configure .env.local:
+  - ANTHROPIC_API_KEY for LLM
+  - DATABASE_URL for PostgreSQL (production)
+- [ ] Run database migrations
 - [ ] Verify Node.js 18+ installation
 
 ### Deployment Options
-**Important**: Must deploy to environment with persistent filesystem
 
-#### Option 1: Docker Container
+#### Option 1: Local/VPS with SQLite
+- [ ] No DATABASE_URL needed
+- [ ] SQLite file created automatically
+- [ ] Run migrations: `npm run db:migrate:sqlite`
+- [ ] Start server: `npm run start`
+
+#### Option 2: Serverless (Vercel) with PostgreSQL
+- [ ] Set DATABASE_URL to PostgreSQL connection string
+- [ ] Use Neon, Supabase, or Vercel Postgres
+- [ ] Run migrations in CI/CD: `npm run db:migrate:postgres`
+- [ ] Deploy: `vercel deploy`
+
+#### Option 3: Docker Container
 - [ ] Create Dockerfile with Node.js base
-- [ ] Mount volume for /data directory
+- [ ] Choose SQLite or PostgreSQL via DATABASE_URL
+- [ ] Run migrations on container start
 - [ ] Configure environment variables
-
-#### Option 2: VPS/Dedicated Server
-- [ ] Install Node.js 18+
-- [ ] Clone repository
-- [ ] Run as systemd service or PM2
-- [ ] Configure reverse proxy (nginx/caddy)
-
-#### Option 3: Local Development
-- [ ] npm run dev for development
-- [ ] npm run build && npm run start for production
 
 ## Key Implementation Decisions
 
-### Storage Strategy
-- Atomic writes with proper-lockfile prevents corruption
-- Backup file (todos.json.bak) for recovery
-- Bootstrap creates directory/file automatically
-- Direct file reads (no caching) for simplicity
+### Database Strategy
+- Drizzle ORM for type-safe database operations
+- Dual database support (SQLite dev, PostgreSQL prod)
+- Automatic schema selection based on environment
+- Separate migrations per database dialect
+- Built-in connection pooling for PostgreSQL
 
 ### MCP Integration
 - Tools exposed to Claude for natural language processing
@@ -223,24 +264,24 @@ todo-manager/
 ## Success Criteria
 - [ ] All CRUD operations functional in both interfaces
 - [ ] Natural language interface works with Claude
-- [ ] Data persists correctly to flat file
+- [ ] Data persists correctly to database
 - [ ] Clean, responsive UI with shadcn components
-- [ ] File operations are safe from corruption
-- [ ] Deployment to persistent filesystem environment
+- [ ] Seamless database switching (SQLite ↔ PostgreSQL)
+- [ ] Deployment works on both local and serverless
 
 ## Technical Decisions
 
 | Decision | Rationale |
 |----------|-----------|
+| Drizzle ORM | Type-safe queries, dual DB support |
+| SQLite + PostgreSQL | Simple local dev, scalable production |
 | MCP Server | Clean tool integration with Claude |
-| proper-lockfile | Prevents concurrent write corruption |
 | shadcn/ui | Beautiful components, full control |
 | Zod validation | Type-safe runtime validation |
-| No caching | Simplicity for 500 todos |
-| Atomic writes | Data integrity without complexity |
+| Separate schemas | Optimal for each database dialect |
 
 ## Implementation Priority
-1. **File storage with protection** - Foundation must be solid
+1. **Database setup with Drizzle** - Foundation must be solid
 2. **Basic CRUD API** - Core functionality first
 3. **UI with shadcn** - User-facing interface
 4. **MCP server setup** - Tool definitions for LLM
