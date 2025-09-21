@@ -1,6 +1,6 @@
 - I noticed it went a bit overboard, but you can see it's trying to think about production issue from the start. 
 - It doesn't always follow the protocol exactly. You have to be diligent to get it to follow the protocol. 
-- It overspecced things -- part of the context is things like is this likely to be a se4rver than in the first realease has to deal with rate limiting? 
+- It overspecced things -- part of the context is things like is this likely to be a server than in the first realease has to deal with rate limiting? 
 - Here's what happened after the spec was done. 
 
     1. LLM Interface: Replaced regex/pattern matching with Claude Sonnet integration - CRUD
@@ -37,4 +37,13 @@
 Initially I said a file-based list. But as we worked through it and the plan, it turned file-based was actually way more headache than I thought it would be. The point is it wasn't a fixed process -- I told it to go back and fix it. 
 
 - There are issues with compliance. It doesn't always consult at the end of the phase. The human sometimes has to remind it. 
-- SPIDER
+
+I used the spider-updater and here are the choices it came to me with: 
+
+ Major Improvements to Adopt:
+
+  1. Revert "reviews" back to "lessons" - They consistently use lessons/ which is clearer terminology
+  2. Stronger I-D-E enforcement - Add mandatory language to prevent skipping Defend/Evaluate phases
+  3. Immediate test writing requirement - Tests must be written alongside implementation, not retroactively
+  4. Remove the phase completion checklist - It's redundant and overly prescriptive
+  5. Move time estimate warning inline - Better placement in the plan output section

@@ -129,6 +129,7 @@ Example bad response: "I've created your todo for you."
 interface ChatRequest {
   message: string
   conversationHistory?: Message[]  // Last 10 messages
+  requestId: string                // Client-generated UUID for idempotency
   sessionId?: string               // Optional for future session management
 }
 ```
@@ -248,6 +249,21 @@ enum ErrorType {
 ```
 
 ## Consultation Notes
+
+### Gemini Pro Review
+
+**Key Recommendations**:
+1. **Clarify Architecture**: Start with client-authoritative history (stateless server) for MVP
+2. **Add run_id Immediately**: Generate unique ID per request for debugging from day one
+3. **Stream Responses**: Use ReadableStream API to show progress in real-time
+4. **Idempotency Critical**: Add requestId to prevent duplicate operations
+5. **Tool Output Delimiters**: Wrap tool outputs in XML tags to prevent prompt injection
+
+**Implementation Priorities**:
+- Iteration limits and timeouts are non-negotiable (Phase 1)
+- Use nanoid() for run_id generation
+- Stream thoughts/actions as they happen for better UX
+- Client generates requestId UUID for each user message
 
 ### GPT-5 Review (8/10 Confidence)
 

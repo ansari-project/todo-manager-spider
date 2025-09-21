@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { spawn } from 'child_process'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
+import { z } from 'zod'
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
@@ -15,8 +16,8 @@ let mcpClient: Client | null = null
 async function getMCPClient() {
   if (!mcpClient) {
     const transport = new StdioClientTransport({
-      command: 'node',
-      args: ['dist/mcp/mcp/server.js'],
+      command: 'npx',
+      args: ['tsx', 'mcp/server.ts'],
     })
 
     mcpClient = new Client({
@@ -48,7 +49,7 @@ async function executeMCPTool(client: Client, name: string, args: any) {
       name,
       arguments: args
     }
-  }, {})
+  }, z.any())
 
   return result
 }
@@ -69,7 +70,13 @@ export async function POST(request: NextRequest) {
     const toolsResponse = await client.request({
       method: 'tools/list',
       params: {}
-    }, {})
+    }, z.object({
+      tools: z.array(z.object({
+        name: z.string(),
+        description: z.string(),
+        inputSchema: z.any()
+      }))
+    }))
 
     const tools = convertMCPToolsToClaudeFormat(toolsResponse.tools || [])
 
@@ -84,7 +91,7 @@ export async function POST(request: NextRequest) {
 When users ask to manage todos, use these tools to help them. Be conversational and helpful.`
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
       temperature: 0,
       system: systemPrompt,
@@ -110,7 +117,7 @@ When users ask to manage todos, use these tools to help them. Be conversational 
 
       // Get Claude's response after tool execution
       const followUpResponse = await anthropic.messages.create({
-        model: 'claude-3-sonnet-20240229',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 1024,
         temperature: 0,
         system: systemPrompt,
