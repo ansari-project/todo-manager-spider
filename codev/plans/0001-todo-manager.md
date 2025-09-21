@@ -84,12 +84,16 @@ todo-manager/
 - [ ] Configure Drizzle configs for both databases
 - [ ] Add environment validation with Zod
 
+<!-- What if we get everything working with sqlite first, and then add postgres as a near-final stage? -->
+
 ### 2.2 Database Client
 - [ ] Implement connection logic:
   - SQLite for local development
   - PostgreSQL with pg Pool for Node runtime
   - Neon HTTP driver for Edge runtime
 - [ ] Add connection pooling for PostgreSQL
+
+<!-- Do we need connection pooling? -->
 - [ ] Create global singleton for database instance
 
 ### 2.3 Migrations
@@ -141,6 +145,8 @@ todo-manager/
 
 ### 4.1 State Management
 - [ ] Set up Zustand store
+
+<!-- Tell me more about zustand so we can decide if we need it. -->
 - [ ] Define actions (CRUD operations)
 - [ ] Server as source of truth
 - [ ] Optimistic updates for better UX
@@ -167,6 +173,8 @@ todo-manager/
 - [ ] Loading states
 - [ ] Error handling
 - [ ] Responsive design (mobile/tablet/desktop)
+
+<!-- How are oyu thinking about the conversation interface? Are you thinking of having it in the same page? -->
 
 ## Phase 5: MCP Server & LLM Integration
 
@@ -199,6 +207,9 @@ todo-manager/
 - [ ] Confirmation dialogs for destructive operations
 
 ## Phase 6: Testing & Deployment Preparation
+
+
+<!-- We should be writing tests as we go. Do we need to have this special testing phase? -->
 
 ### 6.1 Core Testing
 - [ ] Storage manager tests (atomic writes, locking)
