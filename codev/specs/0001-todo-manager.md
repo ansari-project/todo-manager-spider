@@ -54,6 +54,7 @@ interface Todo {
   - "Mark the report review as completed"
   - "Change the priority of task 3 to medium"
   - "Delete all completed tasks from last week"
+<!-- I also want to be able to say general things like: add emoji to my todos. -->
 - Context-aware responses
 - Confirmation for destructive operations
 
@@ -65,22 +66,36 @@ interface Todo {
 - File operations optimized with caching
 - Debounced auto-save for edits
 
+<!-- I don't care about any of this this. -->
+
 #### Storage
 - JSON flat file: `data/todos.json`
 - **Atomic writes**: Write to temp file (`todos.json.tmp`) then atomic rename
 - **File locking**: Using `proper-lockfile` to prevent concurrent write conflicts
 - **In-memory cache**: Server loads file on startup, serves from cache for <200ms responses
+<!-- Overkill for now -->
 - Backup file maintained: `data/todos.backup.json`
+  
+<!-- Overkill for now -->
 - Maximum file size: 10MB (~10,000 todos)
+  
+<!-- Overkill -- 500 is more than enough -->
 
 #### User Experience
 - Responsive design (mobile, tablet, desktop)
 - Keyboard shortcuts for common actions
 - Undo/redo for recent operations
+
+<!-- Overkill for now -->
 - Toast notifications for user feedback
+
+<!-- overkill for now -->
 - Accessibility (WCAG 2.1 AA compliance)
 - **State Management**: Zustand for React state management
+
+<!-- overkill for now -->
 - **API Protection**: Rate limiting (100 requests/min per IP)
+<!-- overkill for now -->
 
 ### API Endpoints
 ```
@@ -105,6 +120,8 @@ POST   /api/conversation   - Process natural language command
 6. **Priority**: "urgent", "important", "high/medium/low priority"
 7. **Due dates**: "by [date]", "due [date]", "deadline [date]"
 
+<!-- I don't want you to be so rigid about it. -->
+
 #### Natural Language Processing
 - **Phase 1 (MVP)**: Regex/keyword matching for intent and entity extraction
 - **Phase 2**: Integration of `compromise.js` for advanced NLP capabilities
@@ -113,6 +130,8 @@ POST   /api/conversation   - Process natural language command
 - Entity extraction (title, priority, due date)
 - Fuzzy matching for todo identification (Phase 2)
 - Context preservation for follow-up commands (Phase 2)
+
+<!-- I don't want you to do all this stuff or to use compromise. I want a full blown llm interface. I want you to use Claude Sonnet and to make the CRUD operations available as a tool. -->
 
 ## User Stories
 
@@ -137,6 +156,7 @@ POST   /api/conversation   - Process natural language command
 - [ ] Error handling with user-friendly messages
 
 ### Should Have
+<!-- All of these are overkill. Get rid of them.  -->
 - [ ] Sorting by multiple criteria
 - [ ] Filtering by status, priority, date range
 - [ ] Undo/redo functionality
@@ -144,7 +164,9 @@ POST   /api/conversation   - Process natural language command
 - [ ] Export/import functionality
 - [ ] Basic analytics (completion rate, overdue items)
 
+
 ### Nice to Have
+<!-- all of these are overkill -->
 - [ ] Dark mode
 - [ ] Recurring todos
 - [ ] Tags/categories
@@ -153,6 +175,7 @@ POST   /api/conversation   - Process natural language command
 - [ ] Voice input for conversational interface
 
 ## Out of Scope
+<!-- overkill -->
 - User authentication/multi-user support
 - Cloud synchronization
 - Mobile native apps
@@ -195,18 +218,23 @@ POST   /api/conversation   - Process natural language command
 - proper-lockfile (for concurrent write protection)
 - date-fns (for date parsing)
 - Zustand (for state management)
+<!-- Overkill -->
 - compromise.js (Phase 2 - advanced NLP)
 - express-rate-limit (for API protection)
+<!-- What are your planning on using for the UI? Can we talk about it? -->
 
 ## Testing Strategy
 - **Unit Tests**: Jest/Vitest for business logic, file operations, and API handlers
 - **Integration Tests**: API endpoint testing for complete request/response cycles
 - **Component Tests**: React Testing Library for UI component verification
 - **NLP Accuracy**: Golden test set of 50-100 natural language commands
+]
+<!-- These last two are overkill -->
 - **Performance Tests**: Load testing for concurrent operations and large file handling
 - **E2E Tests**: Playwright for critical user workflows
 
 ## Timeline Estimate
+<!-- No timelines -->
 - Specification & Planning: 1 day
 - Core Implementation: 3-4 days
 - Conversational Interface Phase 1: 2 days
