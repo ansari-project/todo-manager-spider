@@ -1,30 +1,62 @@
 # Specification: Todo Manager Application
 
 ## Overview
-A modern web-based Todo Manager application with both traditional UI and conversational interface, built using Next.js 14+ with flat file storage.
+A modern web-based Todo Manager application with both traditional UI and conversational interface, built using Next.js 14+ with database storage via Drizzle ORM.
 
 ## Core Requirements
 
 ### Technical Stack
 - **Frontend Framework**: Next.js 14+ (App Router)
 - **UI Components**: React with TypeScript
-- **Storage**: Flat file (JSON) for todo persistence
+- **Storage**: Database via Drizzle ORM (SQLite/PostgreSQL)
 - **API**: Next.js API routes for backend operations
 - **Conversational Interface**: Natural language processing for CRUD operations
 
 ### Data Model
 ```typescript
-interface Todo {
-  id: string;                    // UUID
-  title: string;                  // Required, max 200 chars
-  description?: string;           // Optional, max 1000 chars
-  priority: 'low' | 'medium' | 'high';
-  dueDate?: string;              // ISO 8601 format
-  status: 'pending' | 'completed';
-  createdAt: string;             // ISO 8601 format
-  updatedAt: string;             // ISO 8601 format
-  completedAt?: string;          // ISO 8601 format
-}
+// SQLite Schema (db/schema.sqlite.ts)
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+export const todos = sqliteTable('todos', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  title: text('title', { length: 200 }).notNull(),
+  description: text('description', { length: 1000 }),
+  priority: text('priority').notNull().default('medium'), // CHECK constraint added separately
+  dueDate: integer('due_date', { mode: 'timestamp' }),
+  status: text('status').notNull().default('pending'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).defaultNow(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).defaultNow().$onUpdate(() => new Date()),
+  completedAt: integer('completed_at', { mode: 'timestamp' })
+}, (table) => ({
+  statusIdx: index('idx_status').on(table.status),
+  priorityIdx: index('idx_priority').on(table.priority),
+  dueDateIdx: index('idx_due_date').on(table.dueDate),
+  createdAtIdx: index('idx_created_at').on(table.createdAt)
+}));
+
+// PostgreSQL Schema (db/schema.postgres.ts)
+import { pgTable, uuid, text, timestamp, pgEnum, index } from 'drizzle-orm/pg-core';
+export const priorityEnum = pgEnum('priority', ['low', 'medium', 'high']);
+export const statusEnum = pgEnum('status', ['pending', 'completed']);
+export const todos = pgTable('todos', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: text('title').notNull(),
+  description: text('description'),
+  priority: priorityEnum('priority').notNull().default('medium'),
+  status: statusEnum('status').notNull().default('pending'),
+  dueDate: timestamp('due_date', { withTimezone: false }),
+  createdAt: timestamp('created_at', { withTimezone: false }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: false }).defaultNow().$onUpdate(() => new Date()),
+  completedAt: timestamp('completed_at', { withTimezone: false })
+}, (table) => ({
+  statusIdx: index('idx_status').on(table.status),
+  priorityIdx: index('idx_priority').on(table.priority),
+  dueDateIdx: index('idx_due_date').on(table.dueDate),
+  createdAtIdx: index('idx_created_at').on(table.createdAt)
+}));
+
+// Unified type exports (works with either schema)
+export type Todo = typeof todos.$inferSelect;
+export type NewTodo = typeof todos.$inferInsert;
 ```
 
 ### Functional Requirements
@@ -62,16 +94,18 @@ interface Todo {
 ### Non-Functional Requirements
 
 #### Performance
-- Reasonable response times for ~500 todos
-- Direct file reads (no caching needed)
+- Fast database queries with indexes
+- Connection pooling for concurrent requests
+- No file locking issues
 
 #### Storage
-- JSON flat file: `data/todos.json`
-- **Atomic writes**: Write to temp file then rename for safety
-- **File locking**: Using `proper-lockfile` to prevent concurrent corruption
-- **Bootstrap**: Auto-create data directory and empty file on first run
-- **Backup**: Maintain `todos.json.bak` for recovery
-- Maximum ~500 todos
+- **Database**: Drizzle ORM with dual support:
+  - **Local Development**: SQLite (`todos.db`)
+  - **Production**: PostgreSQL (via DATABASE_URL)
+- **Automatic migrations**: Drizzle Kit for schema management
+- **Type-safe queries**: Full TypeScript integration
+- **Connection pooling**: Built-in for PostgreSQL
+- **Maximum**: ~10,000 todos (increased from 500)
 
 #### User Experience
 - Responsive design (mobile, tablet, desktop)
@@ -138,34 +172,36 @@ POST   /api/conversation   - Process natural language command (rate limited: 10/
 
 ## Out of Scope
 - User authentication/multi-user support
-- Cloud synchronization
+- Cloud synchronization (beyond database)
 - Mobile native apps
 - Email/calendar integration
 - Attachments/file uploads
 - Collaboration features
-- Database storage (only flat file)
+- NoSQL databases (MongoDB, etc.)
 
 ## Technical Constraints
 - Must use Next.js 14+ with App Router
 - Must use TypeScript for type safety
-- Must store data in JSON flat file
-- No external database dependencies
+- Must use Drizzle ORM for database abstraction
 - Minimal external API dependencies
-- **Deployment**: Requires persistent filesystem (no serverless/Vercel Edge)
-  - Deploy to: VPS, Docker container, or standalone Node.js server
-  - NOT compatible with ephemeral filesystems
+- **Deployment Flexibility**:
+  - **Local/VPS**: SQLite (simple, no setup)
+  - **Serverless (Vercel/Netlify)**: PostgreSQL via connection string
+  - **Docker**: Either SQLite or PostgreSQL
 
 ## Success Metrics
 - All CRUD operations functional in both interfaces
 - Natural language interface works smoothly with Claude
-- Data persists correctly to flat file
+- Data persists correctly to database
 - Clean, usable UI
+- Seamless switching between SQLite and PostgreSQL
 
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| File corruption | Low | Simple validation on read/write |
+| Database connection issues | Medium | Proper error handling, connection retries |
+| Schema migration conflicts | Low | Drizzle Kit handles migrations safely |
 | LLM API failures | Medium | Fallback to manual input |
 
 ## Dependencies
@@ -173,8 +209,10 @@ POST   /api/conversation   - Process natural language command (rate limited: 10/
 - React 18+
 - TypeScript 5+
 - Node.js 18+
-- File system access (Node.js fs module)
-- proper-lockfile (for concurrent write protection)
+- **Drizzle ORM** (database abstraction)
+- **Drizzle Kit** (migrations and schema management)
+- **better-sqlite3** (for local SQLite)
+- **@neondatabase/serverless** or **pg** (for PostgreSQL)
 - zod (for input validation)
 - date-fns (for date parsing)
 - Zustand (for state management)
