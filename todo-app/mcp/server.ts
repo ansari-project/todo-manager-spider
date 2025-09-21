@@ -8,7 +8,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js'
 import { db } from '../db/client'
 import { todos } from '../db/schema'
-import { eq, and, gte, lte, desc, asc, like, or } from 'drizzle-orm'
+import { eq, and, desc, asc, like, or } from 'drizzle-orm'
 import { z } from 'zod'
 
 // Tool schemas
@@ -282,7 +282,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const params = updateTodoSchema.parse(args)
         const { id, ...updates } = params
 
-        const updateData: any = { ...updates }
+        const updateData: Record<string, any> = { ...updates }
         if (updates.dueDate !== undefined) {
           updateData.dueDate = updates.dueDate ? new Date(updates.dueDate) : null
         }

@@ -210,14 +210,14 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
                 const sortOrder = params.order || 'desc';
                 switch (sortField) {
                     case 'created':
-                        finalQuery = sortOrder === 'asc'
+                        finalQuery = (sortOrder === 'asc'
                             ? finalQuery.orderBy((0, drizzle_orm_1.asc)(schema_1.todos.createdAt))
-                            : finalQuery.orderBy((0, drizzle_orm_1.desc)(schema_1.todos.createdAt));
+                            : finalQuery.orderBy((0, drizzle_orm_1.desc)(schema_1.todos.createdAt)));
                         break;
                     case 'due':
-                        finalQuery = sortOrder === 'asc'
+                        finalQuery = (sortOrder === 'asc'
                             ? finalQuery.orderBy((0, drizzle_orm_1.asc)(schema_1.todos.dueDate))
-                            : finalQuery.orderBy((0, drizzle_orm_1.desc)(schema_1.todos.dueDate));
+                            : finalQuery.orderBy((0, drizzle_orm_1.desc)(schema_1.todos.dueDate)));
                         break;
                     case 'priority':
                         finalQuery = finalQuery.orderBy(schema_1.todos.priority);

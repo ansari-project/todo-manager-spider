@@ -6,30 +6,62 @@ import { Input } from '@/components/ui/input'
 
 interface ConversationalInterfaceProps {
   onSendMessage: (message: string) => void
+  onTodosChanged?: () => void
 }
 
-export function ConversationalInterface({ onSendMessage }: ConversationalInterfaceProps) {
+export function ConversationalInterface({ onSendMessage, onTodosChanged }: ConversationalInterfaceProps) {
   const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([
     { role: 'assistant', content: 'Hi! I can help you manage your todos. Try saying things like "Add a todo to buy groceries" or "Show me my high priority tasks".' }
   ])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim()) return
+    if (!input.trim() || isLoading) return
 
-    setMessages(prev => [...prev, { role: 'user', content: input }])
-
-    // TODO: Send to LLM via MCP
-    onSendMessage(input)
-
-    // Temporary response
-    setMessages(prev => [...prev, {
-      role: 'assistant',
-      content: 'I understand you want to: "' + input + '". The conversational interface will be connected to Claude via MCP in the next phase.'
-    }])
-
+    const userMessage = input
     setInput('')
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }])
+    setIsLoading(true)
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMessage })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: data.response
+        }])
+
+        // Notify parent to refresh todos if needed
+        if (onTodosChanged) {
+          onTodosChanged()
+        }
+      } else {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: 'Sorry, I encountered an error processing your request.'
+        }])
+      }
+    } catch (error) {
+      console.error('Chat error:', error)
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Sorry, I could not connect to the chat service.'
+      }])
+    } finally {
+      setIsLoading(false)
+    }
+
+    // Also call the original callback
+    onSendMessage(userMessage)
   }
 
   return (
@@ -55,8 +87,11 @@ export function ConversationalInterface({ onSendMessage }: ConversationalInterfa
             onChange={(e) => setInput(e.target.value)}
             placeholder="Tell me what you want to do..."
             className="flex-1"
+            disabled={isLoading}
           />
-          <Button type="submit">Send</Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? 'Sending...' : 'Send'}
+          </Button>
         </div>
       </form>
     </div>

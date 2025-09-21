@@ -130,7 +130,10 @@ export default function Home() {
 
         {/* Bottom 1/3 - Conversational Interface */}
         <div className="flex-1 min-h-[200px] max-h-[400px]">
-          <ConversationalInterface onSendMessage={handleConversationalMessage} />
+          <ConversationalInterface
+            onSendMessage={handleConversationalMessage}
+            onTodosChanged={fetchTodos}
+          />
         </div>
       </div>
     </div>
