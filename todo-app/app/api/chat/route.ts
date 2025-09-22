@@ -10,6 +10,7 @@ import {
   validateRoleAlternation,
   formatMessagesForClaude
 } from '@/lib/chat-types'
+import { TodoFormatter } from '@/lib/todo-formatter'
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
@@ -73,7 +74,7 @@ function convertMCPToolsToClaudeFormat(mcpTools: any[]) {
   }))
 }
 
-// Execute MCP tool
+// Execute MCP tool with formatted output
 async function executeMCPTool(client: Client, name: string, args: any) {
   const result = await client.request({
     method: 'tools/call',
@@ -83,29 +84,55 @@ async function executeMCPTool(client: Client, name: string, args: any) {
     }
   }, z.any() as any)
 
+  // Format the result if it's a todo-related tool
+  if (['list_todos', 'get_todo', 'create_todo', 'update_todo'].includes(name)) {
+    const formatted = TodoFormatter.extractFromToolResult(JSON.stringify(result))
+    if (formatted.success) {
+      return {
+        ...result,
+        _formatted: formatted.message // Add formatted output for assistant to use
+      }
+    }
+  }
+
   return result
 }
 
-// Enhanced system prompt with evidence-based rules
+// Enhanced system prompt with evidence-based rules and formatting
 const SYSTEM_PROMPT = `You are a helpful Todo Manager assistant operating with tools.
 
-Rules:
-- When multiple steps are needed, briefly plan before acting
-- Use tools for any stateful operation. Do not invent todo content
-- Only make claims supported by tool_result evidence in this conversation
-- Include todo titles and IDs from tool outputs when discussing todos
-- If information is missing or ambiguous, ask clarifying questions instead of assuming
+CRITICAL RULES:
+1. ALWAYS use tools before making claims about todos - never guess or assume
+2. When listing todos, include the EXACT titles and IDs from tool_result
+3. When confirming actions, cite the SPECIFIC changes from tool_result
+4. Use the _formatted field in tool results when available for better readability
+5. For multi-step requests, briefly state your plan before executing
+
+Evidence Requirements:
+- Before saying "you have X todos", you MUST call list_todos
+- Before saying "I created/updated/deleted", show the actual result
+- Include specific details: titles, IDs, status, priority from tool outputs
+- If a tool fails, report the exact error, don't pretend it succeeded
+- When tool results include _formatted, prefer using that for user-friendly output
+
+Formatting Guidelines:
+- Use status icons: ✅ completed, 🔄 in_progress, ⭕ pending, ❌ cancelled
+- Show priority with indicators: HIGH priority, medium (default), low priority
+- Include due dates when present, highlight if overdue with ⚠️
+- Group todos by status when listing multiple items
+
+Behavioral Guidelines:
+- Ask clarifying questions when requests are ambiguous
 - Avoid repeating the same tool call with identical inputs
 - Stop when the task is complete or more tools are not needed
+- Be concise but include all relevant todo details
 
 Available tools:
 - list_todos: List and filter todos
 - create_todo: Create new todos
 - update_todo: Update existing todos
 - delete_todo: Delete todos
-- get_todo: Get details of a specific todo
-
-Be conversational and helpful. When referencing todos, always cite the actual data from tool results.`
+- get_todo: Get details of a specific todo`
 
 // Dedupe key for tool execution
 function dedupeKey(name: string, args: any): string {
@@ -115,6 +142,7 @@ function dedupeKey(name: string, args: any): string {
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
   const controller = new AbortController()
+  let timeout: NodeJS.Timeout | undefined
 
   try {
     // Parse and validate request
@@ -164,7 +192,7 @@ export async function POST(request: NextRequest) {
     const historyDelta: ChatMessage[] = [] // Track tool execution history
 
     // Set up timeout
-    const timeout = setTimeout(() => controller.abort(), DEADLINE_MS)
+    timeout = setTimeout(() => controller.abort(), DEADLINE_MS)
 
     // Convert messages for Claude API
     let claudeMessages = formatMessagesForClaude(messages)
@@ -219,10 +247,16 @@ export async function POST(request: NextRequest) {
           try {
             console.log(`[${run_id}] Executing tool: ${toolUse.name}`)
             const result = await executeMCPTool(client, toolUse.name, toolUse.input)
+
+            // Include formatted output in the tool result content
+            const content = result._formatted
+              ? `${JSON.stringify(result)}\n\n[Formatted Output]:\n${result._formatted}`
+              : JSON.stringify(result)
+
             return {
               type: 'tool_result',
               tool_use_id: toolUse.id,
-              content: JSON.stringify(result)
+              content
             }
           } catch (error: any) {
             console.error(`[${run_id}] Tool error:`, error)
@@ -279,7 +313,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    clearTimeout(timeout)
+    if (timeout) clearTimeout(timeout)
 
     // Check if it was a timeout
     if (error.name === 'AbortError') {

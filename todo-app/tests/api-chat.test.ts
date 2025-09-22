@@ -5,10 +5,7 @@ import { generateRequestId } from '@/lib/chat-types'
 
 // Mock the MCP client and Anthropic
 vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
-  Client: vi.fn().mockImplementation(() => ({
-    connect: vi.fn(),
-    request: vi.fn()
-  }))
+  Client: vi.fn()
 }))
 
 vi.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
@@ -27,7 +24,7 @@ describe('Chat API Memory Tests', () => {
   let mockAnthropicCreate: any
   let mockMCPClient: any
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Reset mocks
     vi.clearAllMocks()
 
@@ -70,8 +67,8 @@ describe('Chat API Memory Tests', () => {
       })
     }
 
-    const { Client } = require('@modelcontextprotocol/sdk/client/index.js')
-    Client.mockImplementation(() => mockMCPClient)
+    const { Client } = await import('@modelcontextprotocol/sdk/client/index.js')
+    vi.mocked(Client).mockImplementation(() => mockMCPClient)
   })
 
   describe('Request Validation', () => {

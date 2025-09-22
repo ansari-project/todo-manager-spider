@@ -52,14 +52,14 @@ describe('Chat API Route', () => {
 
     const request = new NextRequest('http://localhost:3000/api/chat', {
       method: 'POST',
-      body: JSON.stringify({}),
+      body: JSON.stringify({ requestId: 'test-req-1' }),
     })
 
     const response = await POST(request)
     expect(response.status).toBe(400)
 
     const data = await response.json()
-    expect(data.error).toBe('Message is required')
+    expect(data.error).toBe('Invalid request')
   })
 
   it('should validate message processing flow', async () => {
@@ -69,7 +69,9 @@ describe('Chat API Route', () => {
     const request = new NextRequest('http://localhost:3000/api/chat', {
       method: 'POST',
       body: JSON.stringify({
-        message: 'Show me my todos'
+        message: 'Show me my todos',
+        requestId: 'test-req-2',
+        history: []
       }),
     })
 
@@ -87,7 +89,9 @@ describe('Chat API Route', () => {
     const request = new NextRequest('http://localhost:3000/api/chat', {
       method: 'POST',
       body: JSON.stringify({
-        message: 'Add a todo to buy milk'
+        message: 'Add a todo to buy milk',
+        requestId: 'test-req-3',
+        history: []
       }),
     })
 
@@ -105,7 +109,9 @@ describe('Chat API Route', () => {
     const request = new NextRequest('http://localhost:3000/api/chat', {
       method: 'POST',
       body: JSON.stringify({
-        message: 'Test message'
+        message: 'Test message',
+        requestId: 'test-req-4',
+        history: []
       }),
     })
 
