@@ -462,12 +462,12 @@ Execute for each phase in the plan. This is a strict cycle that must be complete
    - Update protocol documents with improvements
    - Update templates if needed
    - Share learnings with team
-   - Document in `codev/lessons/`
+   - Document in `codev/reviews/`
    - **Important**: This protocol should evolve based on each project's learnings
 
 **Output**:
-- Single lessons learned document in `codev/lessons/####-descriptive-name.md`
-- Same filename as spec/plan, captures all learnings from this feature
+- Single review document in `codev/reviews/####-descriptive-name.md`
+- Same filename as spec/plan, captures all learnings and review from this feature
 - Methodology improvement proposals (update protocol if needed)
 
 **Review Required**: Yes - Team retrospective recommended
@@ -563,9 +563,9 @@ spider/0001-user-authentication/database-schema
 Templates for each phase are available in the `templates/` directory:
 - `spec.md` - Specification template
 - `plan.md` - Planning template (includes phase status tracking)
-- `lessons.md` - Lessons learned template
+- `review.md` - Review and lessons learned template
 
-**Remember**: Only create THREE documents per feature - spec, plan, and lessons with the same filename in different directories.
+**Remember**: Only create THREE documents per feature - spec, plan, and review with the same filename in different directories.
 
 ## Protocol Evolution
 
@@ -574,3 +574,101 @@ This protocol can be customized per project:
 2. Modify templates and processes
 3. Document changes in `protocol-changes.md`
 4. Share improvements back to the community
+
+## Lessons Learned from Implementation
+
+### Critical Success Factors (Added 2025-01-22)
+
+Based on implementation of Spec 0002 (Conversational Interface Improvements):
+
+#### 1. Git Discipline is Non-Negotiable
+- **NEVER** use `git add -A`, `git add --all`, or `git add .`
+- **ALWAYS** stage files individually with `git add <specific-file>`
+- **WHY**: Prevents accidental commits of sensitive files, temp files, or unwanted changes
+- **ENFORCEMENT**: Consider pre-commit hooks to block bulk staging commands
+
+#### 2. Multi-Agent Consultation Error Handling
+- **ISSUE**: Models may fail to access files or encounter API errors
+- **SOLUTION**: Proceed with available models rather than blocking entirely
+- **BEST PRACTICE**: Always attempt both models but accept single model feedback if necessary
+
+#### 3. Testing Strategy for External Dependencies
+- **ISSUE**: Deep mocking of external SDKs (e.g., Anthropic, MCP) creates brittle tests
+- **SOLUTION**:
+  - Use integration tests with real test servers where possible
+  - Create wrapper interfaces for external SDKs
+  - Focus unit tests on business logic, not SDK interaction
+- **EXAMPLE**: TodoFormatter tests focused on formatting logic, not API mocking
+
+#### 4. Streaming Implementation Best Practices
+- **CHOICE**: Server-Sent Events (SSE) superior to WebSockets for server-to-client streaming
+- **REQUIREMENTS**:
+  - Heartbeat messages every 15-30 seconds
+  - Support for Last-Event-ID for reconnection
+  - Disable proxy buffering (X-Accel-Buffering: no)
+  - Handle backpressure with stream.write() return values
+- **TESTING**: Must include forced disconnection and reconnection scenarios
+
+#### 5. Evidence-Based Response Architecture
+- **PATTERN**: Separate formatting logic from execution logic
+- **IMPLEMENTATION**: TodoFormatter utility class with `_formatted` field
+- **BENEFIT**: Prevents LLM hallucinations by providing pre-formatted, accurate data
+- **TESTING**: Comprehensive tests for all formatting scenarios
+
+#### 6. Phase Completion Verification
+- **REQUIREMENT**: Each phase MUST be committed before starting next phase
+- **VERIFICATION**: Use `git log --oneline | grep "Phase"` to confirm
+- **RATIONALE**: Ensures clean rollback points and prevents work overlap
+
+#### 7. Documentation Timing
+- **OLD**: Update documentation after implementation
+- **NEW**: Update documentation DURING implementation
+- **SPECIFICALLY**:
+  - Update README.md with new endpoints immediately after creation
+  - Document API changes in same commit as implementation
+  - Keep CLAUDE.md current with process learnings
+
+#### 8. Production Hardening Checklist
+Based on expert review (GPT-5: 8/10, Gemini Pro: 9/10):
+
+**SSE Reliability**:
+- [ ] Heartbeat comments every 15-30s
+- [ ] Retry hints in SSE messages
+- [ ] Support Last-Event-ID for reconnection
+- [ ] Disable proxy buffering and compression
+
+**Observability**:
+- [ ] OpenTelemetry spans for each operation
+- [ ] Correlation IDs across all logs
+- [ ] Metrics for tool latency, retries, cancellations
+- [ ] Error taxonomy with user-safe messages
+
+**Tool Governance**:
+- [ ] Idempotency keys for tool operations
+- [ ] Side-effect classification (read vs write)
+- [ ] Circuit breakers for failing tools
+- [ ] Per-tool timeout configuration
+
+**Memory Management**:
+- [ ] Sliding window limits
+- [ ] Auto-summarization for long conversations
+- [ ] PII redaction capabilities
+- [ ] Configurable retention/TTL
+
+### Common Pitfalls to Avoid
+
+1. **Skipping Defend Phase**: Always write tests immediately, not retroactively
+2. **Incomplete Evaluation**: Get expert approval BEFORE user review
+3. **Bulk Git Operations**: Never use commands that stage all files
+4. **Over-mocking**: Create integration tests instead of complex mocks
+5. **Missing Timeouts**: Always implement AbortController with proper cleanup
+6. **Ignoring Backpressure**: Check stream.write() returns in SSE implementations
+
+### Recommended Tools and Patterns
+
+1. **Streaming**: Server-Sent Events (SSE) for server-to-client
+2. **Cancellation**: AbortController with signal propagation
+3. **Formatting**: Dedicated utility classes (e.g., TodoFormatter)
+4. **Validation**: Zod for runtime type checking
+5. **Testing**: Vitest with focus on integration over unit tests
+6. **Documentation**: Inline updates during implementation
