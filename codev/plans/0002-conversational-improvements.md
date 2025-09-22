@@ -30,13 +30,39 @@ Implementing memory, multi-tool execution, and agentic loop for the conversation
 
 **Decision**: Start with Option 3 (custom) to avoid dependency complexity, evaluate LangChain if we need advanced features like conversation summarization.
 
+### Multi-Agent Consultation Results
+
+**Gemini Pro** strongly recommends LangChain from the start:
+- Agentic loops and token management are non-trivial to build correctly
+- ConversationWindowBufferMemory and ConversationSummaryBufferMemory solve truncation
+- The `langchain-mcp-adapters` package provides official integration
+- Streaming responses are critical for 5-15 second operations
+
+**GPT-5** recommends starting custom:
+- Minimal architectural change to existing code
+- Keep implementation thin for easy migration
+- Avoid premature complexity
+- Focus on core loop first, add LangChain when truncation becomes necessary
+
+**Consensus Points**:
+- Must handle multiple tool_use blocks per turn (not just one)
+- Evidence-based responses are critical to prevent hallucination
+- Streaming/progress indication essential for UX
+- Need tool deduplication to prevent repeated calls
+- Cache tools list to avoid repeated MCP fetches
+- Strong system prompt constraints required
+
+**Final Decision**: Proceed with custom implementation but architect for easy LangChain migration. Keep memory logic isolated in utility functions that can be swapped.
+
 ## Phase 1: Basic Memory Implementation
 
 ### 1.1 Update API Contract
-- [ ] Modify ChatRequest interface to include conversation history
+- [ ] Add Zod schema for request validation (ChatRequestSchema)
+- [ ] Accept conversation history array with role alternation
 - [ ] Add requestId for idempotency (nanoid)
 - [ ] Add run_id generation for debugging/tracing
-- [ ] Update response to include actions taken
+- [ ] Include maxIterations parameter (default 3, max 5)
+- [ ] Update response to include actions taken and iteration count
 
 ### 1.2 Frontend Memory Management
 - [ ] Store full conversation history in React state
@@ -65,7 +91,12 @@ Implementing memory, multi-tool execution, and agentic loop for the conversation
 - [ ] Store tool results with message history
 
 ### 2.2 Evidence-Based Responses
-- [ ] Update system prompt to require citing tool outputs
+- [ ] Strengthen system prompt with explicit rules:
+  - "Plan before acting for multi-step requests"
+  - "Only make claims supported by tool_result evidence"
+  - "Cite todo titles/ids from tool outputs"
+  - "Avoid repeating identical tool calls"
+  - "Stop when task complete or no more tools needed"
 - [ ] Format responses to include actual todo content
 - [ ] Show before/after states for updates
 - [ ] Never allow generic confirmations without data
@@ -90,17 +121,21 @@ Implementing memory, multi-tool execution, and agentic loop for the conversation
 interface AgenticState {
   iterations: number
   maxIterations: 3  // Start conservative
-  toolsExecuted: ToolExecution[]
+  toolsExecuted: Set<string>  // Dedupe key: "tool_name:args_hash"
+  deadline: number  // Date.now() + 20000ms
   needsMoreActions: boolean
-  confidence: number
 }
 ```
 
+**Critical**: Must handle MULTIPLE tool_use blocks per turn, not just one
+
 ### 3.2 Loop Control Logic
 - [ ] Implement iteration counter with hard limit (3)
-- [ ] Add timeout mechanism (20 seconds)
-- [ ] Track tools executed to prevent duplicates
-- [ ] Implement completion evaluation after each tool
+- [ ] Add timeout mechanism (20 seconds with AbortController)
+- [ ] Track tools executed with dedupeKey to prevent duplicates
+- [ ] Execute ALL tool_use blocks in parallel per turn
+- [ ] Stop when no tool_use blocks returned
+- [ ] Cache tools list with TTL to avoid repeated fetches
 
 ### 3.3 Multi-Step Reasoning
 - [ ] Allow Claude to chain operations
@@ -123,11 +158,16 @@ interface AgenticState {
 
 ## Phase 4: UI Improvements
 
-### 4.1 Loading States
-- [ ] Add "thinking" indicator during processing
+**CRITICAL**: Streaming responses required for multi-tool operations (5-15s duration)
+
+### 4.1 Loading States & Streaming
+- [ ] Implement streaming with ReadableStream in API route
+- [ ] Stream assistant's thought process during execution:
+  - "Planning: I need to create a todo then list all todos"
+  - "Executing: create_todo..."
+  - "Todo created. Now fetching your list..."
 - [ ] Show step counter (1 of 3) for multi-step operations
-- [ ] Display current action being performed
-- [ ] Support cancellation mid-operation
+- [ ] Support cancellation with AbortController
 
 ### 4.2 Auto-Scrolling
 - [ ] Auto-scroll to bottom on new messages
@@ -244,6 +284,50 @@ interface AgenticState {
 | Evidence-based responses | Prevents hallucination, builds trust |
 | run_id from start | Critical for debugging production issues |
 | No truncation initially | Avoid complexity, monitor token usage first |
+
+## Concrete Implementation Pattern
+
+### Minimal Agentic Loop (based on multi-agent consultation)
+```typescript
+// Key types
+interface ChatRequest {
+  history: Message[]
+  requestId: string
+  run_id?: string
+  maxIterations?: number
+}
+
+// Core loop
+const MAX_ITER = 3
+const DEADLINE_MS = 20000
+const executed = new Set<string>()
+
+while (iterations < MAX_ITER && Date.now() < deadline) {
+  iterations++
+
+  const response = await anthropic.messages.create({
+    messages: history,
+    tools: claudeTools
+  })
+
+  // Handle ALL tool_use blocks in parallel
+  const toolUses = response.content.filter(p => p.type === 'tool_use')
+  if (toolUses.length === 0) break
+
+  const results = await Promise.all(
+    toolUses.map(async tu => {
+      const key = `${tu.name}:${JSON.stringify(tu.input)}`
+      if (executed.has(key)) return errorResult(tu.id, 'duplicate')
+      executed.add(key)
+      return executeMCPTool(client, tu.name, tu.input)
+    })
+  )
+
+  // Add results to history and continue
+  history.push({ role: 'assistant', content: response.content })
+  history.push({ role: 'user', content: results.map(toToolResult) })
+}
+```
 
 ## Definition of Done
 
