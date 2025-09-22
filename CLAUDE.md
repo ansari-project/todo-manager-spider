@@ -48,6 +48,8 @@ This is a Todo Manager application built using the SPIDER protocol methodology w
 2. **Write Tests Alongside Implementation**: Not retroactively - this catches issues early
 3. **Multi-Agent Reviews Are Valuable**: They catch blind spots and provide diverse perspectives
 4. **Simplification Over Complexity**: Avoid over-engineering - start simple and iterate
+5. **Git Discipline is Critical**: NEVER use `git add -A` or similar - always stage files individually
+6. **Protocol Adherence**: Follow SPIDER protocol exactly - complete each phase's I-D-E before moving to next
 
 ### Technical Decisions
 1. **Database Over Flat Files**: Solves concurrency, locking, and scalability issues
@@ -55,6 +57,8 @@ This is a Todo Manager application built using the SPIDER protocol methodology w
    - See [Drizzle ORM Implementation Guide](codev/resources/drizzle-orm-guide.md) for detailed explanation
 3. **MCP for LLM Tools**: Clean separation between tool definitions and implementation
 4. **Split View UI**: Todos on top (2/3), chat on bottom (1/3) for optimal screen usage
+5. **Server-Sent Events for Streaming**: Superior to WebSockets for server-to-client push in chat
+6. **TodoFormatter Utility**: Centralized formatting logic prevents hallucinations
 
 ### Known Issues to Address
 - **Pagination**: Must be added before production deployment

@@ -14,6 +14,11 @@ A modern todo management application built with Next.js 14 and featuring both tr
 ### Conversational Interface
 - ✅ Natural language todo management powered by Claude Sonnet
 - ✅ MCP (Model Context Protocol) tools for structured LLM interactions
+- ✅ Conversation memory with context preservation
+- ✅ Multi-tool execution with agentic loop (up to 3 iterations)
+- ✅ Evidence-based responses with formatted tool results
+- ✅ **Streaming responses** with real-time progress updates
+- ✅ Cancellable operations with timeout protection (20s max)
 - ✅ Loading states and error handling
 - ✅ Automatic UI refresh after chat actions
 
@@ -21,8 +26,9 @@ A modern todo management application built with Next.js 14 and featuring both tr
 - ✅ Type-safe database operations with Drizzle ORM
 - ✅ SQLite for local development
 - ✅ PostgreSQL schema ready (deployment pending)
-- ✅ Comprehensive test coverage (24 tests)
+- ✅ Comprehensive test coverage (78 tests across all features)
 - ✅ Zod validation for API inputs
+- ✅ Server-Sent Events (SSE) for streaming responses
 
 ## Tech Stack
 
@@ -115,7 +121,8 @@ todo-app/
 ├── app/                    # Next.js app router
 │   ├── api/               # API routes
 │   │   ├── todos/         # CRUD endpoints
-│   │   └── chat/          # Claude integration
+│   │   ├── chat/          # Claude integration (standard)
+│   │   └── chat/stream/   # Streaming SSE endpoint
 │   ├── components/        # React components
 │   └── page.tsx           # Main page
 ├── db/                    # Database layer
@@ -144,6 +151,30 @@ The application uses a simple but comprehensive todo schema:
   updatedAt: Date
   completedAt: Date (optional)
 }
+```
+
+### API Endpoints
+
+#### Todo CRUD Operations
+- `GET /api/todos` - List all todos
+- `POST /api/todos` - Create a new todo
+- `PATCH /api/todos/[id]` - Update a todo
+- `DELETE /api/todos/[id]` - Delete a todo
+
+#### Chat Endpoints
+- `POST /api/chat` - Standard chat endpoint (wait for complete response)
+- `POST /api/chat/stream` - Streaming endpoint with Server-Sent Events
+
+##### Streaming Response Format
+```typescript
+// Event types sent during streaming
+type StreamEvent =
+  | { type: 'start', run_id: string, message: string }
+  | { type: 'iteration', iteration: number, maxIterations: number }
+  | { type: 'tools', tools: string[], message: string }
+  | { type: 'tool_complete', tool: string, message: string }
+  | { type: 'complete', response: string, toolsExecuted: string[] }
+  | { type: 'error', error: string }
 ```
 
 ### MCP Tools Available
