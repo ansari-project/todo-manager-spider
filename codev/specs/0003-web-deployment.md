@@ -240,4 +240,37 @@ NEXT_PUBLIC_APP_URL=xxx
 - SSL certificate (automatic with most platforms)
 
 ## Consultation Log
-*To be populated after multi-agent review*
+*Multi-agent review attempted but models encountered file access issues. Proceeding with direct analysis.*
+
+### Additional Considerations (Based on Analysis)
+
+#### Critical Deployment Decisions
+
+1. **MCP Server Architecture for Production**
+   - **Option 1: Embed Tools Directly** - Rewrite MCP tools as Next.js API functions (recommended for Vercel)
+   - **Option 2: Queue-Based Processing** - Use message queue (Redis/BullMQ) for long-running operations
+   - **Option 3: Separate Microservice** - Deploy MCP server separately on Railway/Fly.io
+
+2. **Authentication Strategy**
+   - Start without auth for MVP deployment
+   - Plan for NextAuth.js integration in Phase 2
+   - Consider session-based todos initially
+
+3. **Rate Limiting Implementation**
+   - Essential before public deployment
+   - Use Vercel Edge Middleware or Upstash Redis
+   - Limits: 100 requests/minute for API, 10 requests/minute for AI chat
+
+#### Revised Recommendation
+
+**Deploy to Vercel with these adaptations:**
+1. Refactor MCP tools to be native Next.js API functions
+2. Use Neon or Vercel Postgres for database
+3. Implement Upstash Redis for rate limiting and session storage
+4. Add Sentry for error tracking
+5. Use Vercel KV for conversation history caching
+
+**Deployment Phases:**
+1. **Phase 1**: Basic deployment without auth (1-2 days)
+2. **Phase 2**: Add rate limiting and monitoring (1 day)
+3. **Phase 3**: Production hardening and optimization (1-2 days)
