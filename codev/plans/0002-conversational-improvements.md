@@ -7,6 +7,29 @@
 ## Overview
 Implementing memory, multi-tool execution, and agentic loop for the conversational interface based on the approved hybrid approach from the specification.
 
+## Library Evaluation
+
+### Memory Management Options
+
+#### Option 1: LangChain Memory (Recommended)
+- **Pros**: Battle-tested, built-in conversation types, MCP adapter available (langchain-mcp-adapters)
+- **Packages**: `@langchain/core` + `langchain-mcp-adapters`
+- **Memory Types**: ConversationBufferMemory, ConversationSummaryMemory, ConversationWindowMemory
+- **Integration**: Works with our existing MCP setup via official adapter
+
+#### Option 2: Vercel AI SDK
+- **Pros**: Built for Next.js, streaming support, conversation management
+- **Package**: `ai` (Vercel AI SDK)
+- **Features**: Built-in conversation state, streaming, error handling
+- **Cons**: Would require rewriting our MCP integration
+
+#### Option 3: Custom Memory Implementation
+- **Pros**: Full control, smaller bundle size, no new dependencies
+- **Cons**: More code to maintain, reinventing established patterns
+- **Approach**: Store in React state + localStorage fallback
+
+**Decision**: Start with Option 3 (custom) to avoid dependency complexity, evaluate LangChain if we need advanced features like conversation summarization.
+
 ## Phase 1: Basic Memory Implementation
 
 ### 1.1 Update API Contract
@@ -144,25 +167,19 @@ interface AgenticState {
 - [ ] Alert on timeout frequency
 - [ ] Log unusual patterns
 
-## Implementation Priority & Timeline
+## Implementation Sequence
 
-### Week 1: Foundation (Phases 1-2)
-**Goal**: Memory and better responses
-1. Day 1-2: Basic memory implementation
-2. Day 3-4: Tool result inspection
-3. Day 5: Testing and refinement
+### Phase Dependencies
+- Phase 1 (Memory) blocks all others - foundation requirement
+- Phase 2 (Result Inspection) depends on Phase 1
+- Phase 3 (Multi-Tool) depends on Phases 1-2
+- Phase 4 (UI) can partially parallel with Phase 3
+- Phase 5 (Observability) should start early, complete last
 
-### Week 2: Core Loop (Phase 3)
-**Goal**: Multi-tool execution working
-1. Day 1-2: Loop infrastructure
-2. Day 3-4: Error handling and safety
-3. Day 5: Integration testing
-
-### Week 3: Polish (Phases 4-5)
-**Goal**: Production-ready UI and monitoring
-1. Day 1-2: UI improvements
-2. Day 3-4: Observability
-3. Day 5: Final testing
+### Priority Order
+1. **Critical Path**: Phase 1 → Phase 2 → Phase 3
+2. **Enhancement Path**: Phase 4 (UI polish)
+3. **Production Path**: Phase 5 (monitoring/safety)
 
 ## Success Metrics
 
