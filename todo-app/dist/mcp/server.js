@@ -190,7 +190,6 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
         switch (name) {
             case 'list_todos': {
                 const params = listTodosSchema.parse(args);
-                let query = client_1.db.select().from(schema_1.todos);
                 const conditions = [];
                 if (params.status) {
                     conditions.push((0, drizzle_orm_1.eq)(schema_1.todos.status, params.status));
@@ -201,29 +200,30 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
                 if (params.search) {
                     conditions.push((0, drizzle_orm_1.or)((0, drizzle_orm_1.like)(schema_1.todos.title, `%${params.search}%`), (0, drizzle_orm_1.like)(schema_1.todos.description, `%${params.search}%`)));
                 }
+                // Build and execute query
+                let finalQuery = client_1.db.select().from(schema_1.todos);
                 if (conditions.length > 0) {
-                    query = query.where((0, drizzle_orm_1.and)(...conditions));
+                    finalQuery = finalQuery.where((0, drizzle_orm_1.and)(...conditions));
                 }
-                // Sorting
+                // Apply sorting
                 const sortField = params.sort || 'created';
                 const sortOrder = params.order || 'desc';
                 switch (sortField) {
                     case 'created':
-                        query = sortOrder === 'asc'
-                            ? query.orderBy((0, drizzle_orm_1.asc)(schema_1.todos.createdAt))
-                            : query.orderBy((0, drizzle_orm_1.desc)(schema_1.todos.createdAt));
+                        finalQuery = (sortOrder === 'asc'
+                            ? finalQuery.orderBy((0, drizzle_orm_1.asc)(schema_1.todos.createdAt))
+                            : finalQuery.orderBy((0, drizzle_orm_1.desc)(schema_1.todos.createdAt)));
                         break;
                     case 'due':
-                        query = sortOrder === 'asc'
-                            ? query.orderBy((0, drizzle_orm_1.asc)(schema_1.todos.dueDate))
-                            : query.orderBy((0, drizzle_orm_1.desc)(schema_1.todos.dueDate));
+                        finalQuery = (sortOrder === 'asc'
+                            ? finalQuery.orderBy((0, drizzle_orm_1.asc)(schema_1.todos.dueDate))
+                            : finalQuery.orderBy((0, drizzle_orm_1.desc)(schema_1.todos.dueDate)));
                         break;
                     case 'priority':
-                        // Custom priority ordering
-                        query = query.orderBy(schema_1.todos.priority);
+                        finalQuery = finalQuery.orderBy(schema_1.todos.priority);
                         break;
                 }
-                const result = await query;
+                const result = await finalQuery;
                 return {
                     content: [
                         {
@@ -259,7 +259,7 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
                 if (updates.status === 'completed') {
                     updateData.completedAt = new Date();
                 }
-                else if (updates.status && updates.status !== 'completed') {
+                else if (updates.status) {
                     updateData.completedAt = null;
                 }
                 const result = await client_1.db
@@ -322,7 +322,7 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
     }
     catch (error) {
         if (error instanceof zod_1.z.ZodError) {
-            throw new types_js_1.McpError(types_js_1.ErrorCode.InvalidParams, `Invalid parameters: ${error.errors.map(e => e.message).join(', ')}`);
+            throw new types_js_1.McpError(types_js_1.ErrorCode.InvalidParams, `Invalid parameters: ${error.message}`);
         }
         if (error instanceof types_js_1.McpError) {
             throw error;

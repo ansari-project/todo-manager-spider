@@ -12,7 +12,7 @@ interface TodoListProps {
 export function TodoList({ todos, onUpdate, onDelete }: TodoListProps) {
   if (todos.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
         No todos yet. Add one above!
       </div>
     )

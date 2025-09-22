@@ -38,7 +38,7 @@ export function TodoForm({ onSubmit }: TodoFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4 border rounded-lg">
+    <form onSubmit={handleSubmit} className="space-y-4 p-4 border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
       <Input
         placeholder="What needs to be done?"
         value={title}

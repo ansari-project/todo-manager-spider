@@ -37,7 +37,7 @@ export function TodoItem({ todo, onUpdate, onDelete }: TodoItemProps) {
   const isOverdue = todo.dueDate && new Date(todo.dueDate) < new Date() && todo.status !== 'completed'
 
   return (
-    <div className={`flex items-center gap-4 p-4 border rounded-lg ${todo.status === 'completed' ? 'opacity-60' : ''}`}>
+    <div className={`flex items-center gap-4 p-4 border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 ${todo.status === 'completed' ? 'opacity-60' : ''}`}>
       <Checkbox
         checked={todo.status === 'completed'}
         onCheckedChange={handleStatusToggle}
@@ -51,12 +51,12 @@ export function TodoItem({ todo, onUpdate, onDelete }: TodoItemProps) {
             onChange={(e) => setTitle(e.target.value)}
             onBlur={handleSave}
             onKeyPress={(e) => e.key === 'Enter' && handleSave()}
-            className="w-full px-2 py-1 border rounded"
+            className="w-full px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             autoFocus
           />
         ) : (
           <h3
-            className={`font-medium cursor-pointer ${todo.status === 'completed' ? 'line-through' : ''}`}
+            className={`font-medium cursor-pointer text-gray-900 dark:text-white ${todo.status === 'completed' ? 'line-through' : ''}`}
             onClick={() => setIsEditing(true)}
           >
             {todo.title}
@@ -64,7 +64,7 @@ export function TodoItem({ todo, onUpdate, onDelete }: TodoItemProps) {
         )}
 
         {todo.description && (
-          <p className="text-sm text-gray-600 mt-1">{todo.description}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{todo.description}</p>
         )}
 
         <div className="flex gap-2 mt-2">
@@ -73,7 +73,7 @@ export function TodoItem({ todo, onUpdate, onDelete }: TodoItemProps) {
           </Badge>
 
           {todo.dueDate && (
-            <span className={`text-sm ${isOverdue ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+            <span className={`text-sm ${isOverdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
               Due: {format(new Date(todo.dueDate), 'MMM d, yyyy')}
             </span>
           )}

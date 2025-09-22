@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { generateRequestId, type ChatMessage } from '@/lib/chat-types'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface StreamingConversationalInterfaceProps {
   onSendMessage: (message: string) => void
@@ -227,7 +229,7 @@ export function StreamingConversationalInterface({
   }
 
   return (
-    <div className="flex flex-col h-full border-t">
+    <div className="flex flex-col h-full border-t dark:border-gray-700">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -235,18 +237,59 @@ export function StreamingConversationalInterface({
               className={`max-w-[80%] rounded-lg p-3 ${
                 msg.role === 'user'
                   ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-900'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
               }`}
             >
-              <div className="whitespace-pre-wrap">
+              <div className={`prose prose-sm max-w-none ${
+                msg.role === 'user' ? 'prose-invert' : ''
+              }`}>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                  ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
+                  li: ({ children }) => <li>{children}</li>,
+                  code: ({ children, ...props }) => {
+                    const isInline = !props.className
+                    return isInline ? (
+                      <code className={`px-1 py-0.5 rounded text-sm font-mono ${
+                        msg.role === 'user'
+                          ? 'bg-blue-600/20 text-blue-100'
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                      }`}>{children}</code>
+                    ) : (
+                      <code className={`block p-2 rounded text-sm font-mono overflow-x-auto ${
+                        msg.role === 'user'
+                          ? 'bg-blue-600/20 text-blue-100'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                      }`}>{children}</code>
+                    )
+                  },
+                  h1: ({ children }) => <h1 className="text-xl font-bold mb-2 mt-3 first:mt-0">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-lg font-bold mb-2 mt-3 first:mt-0">{children}</h2>,
+                  h3: ({ children }) => <h3 className="text-base font-bold mb-1 mt-2 first:mt-0">{children}</h3>,
+                  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                  em: ({ children }) => <em className="italic">{children}</em>,
+                  blockquote: ({ children }) => (
+                    <blockquote className={`border-l-4 pl-4 italic my-2 ${
+                      msg.role === 'user' ? 'border-blue-300' : 'border-gray-300 dark:border-gray-600'
+                    }`}>{children}</blockquote>
+                  ),
+                  hr: () => <hr className={`my-4 ${
+                    msg.role === 'user' ? 'border-blue-300' : 'border-gray-300'
+                  }`} />,
+                }}
+              >
                 {formatMessageContent(msg.content)}
+              </ReactMarkdown>
               </div>
             </div>
           </div>
         ))}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 text-gray-900 rounded-lg p-3">
+            <div className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg p-3">
               <div className="flex items-center space-x-2">
                 <div className="animate-pulse">{streamingStatus || 'Thinking...'}</div>
                 {currentIteration > 0 && maxIterations > 0 && (
@@ -271,7 +314,7 @@ export function StreamingConversationalInterface({
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="p-4 border-t">
+      <form onSubmit={handleSubmit} className="p-4 border-t dark:border-gray-700">
         <div className="flex gap-2">
           <Input
             value={input}
@@ -285,7 +328,7 @@ export function StreamingConversationalInterface({
           </Button>
         </div>
         {conversationHistory.length > 0 && (
-          <div className="mt-2 text-xs text-gray-500">
+          <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
             Context: {Math.floor(conversationHistory.length / 2)} messages
           </div>
         )}

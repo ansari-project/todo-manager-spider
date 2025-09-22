@@ -26,8 +26,8 @@ const TOOLS_CACHE_TTL = 60000 // 1 minute cache
 async function getMCPClient() {
   if (!mcpClient) {
     const transport = new StdioClientTransport({
-      command: 'npx',
-      args: ['tsx', 'mcp/server.ts'],
+      command: 'node',
+      args: ['dist/mcp/server.js'],
     })
 
     mcpClient = new Client({
@@ -208,6 +208,7 @@ export async function POST(request: NextRequest) {
         system: SYSTEM_PROMPT,
         messages: claudeMessages,
         tools: claudeTools as any,
+      }, {
         signal: controller.signal as any, // Add abort signal
       })
 

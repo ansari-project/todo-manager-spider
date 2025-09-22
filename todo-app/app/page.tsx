@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { TodoForm } from './components/TodoForm'
 import { TodoList } from './components/TodoList'
-import { ConversationalInterface } from './components/ConversationalInterface'
+import { StreamingConversationalInterface } from './components/StreamingConversationalInterface'
+import { ThemeToggle } from './components/ThemeToggle'
 import { Todo } from '@/db/schema'
 import { CreateTodoInput } from './lib/validators'
 
@@ -101,10 +102,11 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col bg-white dark:bg-gray-900 transition-colors">
       {/* Header */}
-      <header className="border-b px-6 py-4">
-        <h1 className="text-2xl font-bold">Todo Manager</h1>
+      <header className="border-b dark:border-gray-700 px-6 py-4 flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Todo Manager</h1>
+        <ThemeToggle />
       </header>
 
       {/* Main content - split view */}
@@ -116,7 +118,7 @@ export default function Home() {
 
             <div className="mt-6">
               {loading ? (
-                <div className="text-center py-8">Loading...</div>
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">Loading...</div>
               ) : (
                 <TodoList
                   todos={todos}
@@ -130,7 +132,7 @@ export default function Home() {
 
         {/* Bottom 1/3 - Conversational Interface */}
         <div className="flex-1 min-h-[200px] max-h-[400px]">
-          <ConversationalInterface
+          <StreamingConversationalInterface
             onSendMessage={handleConversationalMessage}
             onTodosChanged={fetchTodos}
           />

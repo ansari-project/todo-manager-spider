@@ -33,9 +33,6 @@ export class TodoFormatter {
     const statusIcon = this.getStatusIcon(todo.status)
     parts.push(`${statusIcon} "${todo.title}"`)
 
-    // ID
-    parts.push(`(ID: ${todo.id})`)
-
     // Priority if not medium
     if (todo.priority !== 'medium') {
       parts.push(`[${todo.priority.toUpperCase()} priority]`)
@@ -115,7 +112,7 @@ export class TodoFormatter {
   static formatComparison(before: TodoItem, after: TodoItem): string {
     const changes: string[] = []
 
-    changes.push(`Updated todo "${after.title}" (ID: ${after.id}):`)
+    changes.push(`Updated todo "${after.title}":`)
 
     if (before.title !== after.title) {
       changes.push(`  Title: "${before.title}" → "${after.title}"`)
