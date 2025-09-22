@@ -34,18 +34,64 @@ export function StreamingConversationalInterface({
 }: StreamingConversationalInterfaceProps) {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: 'assistant',
-      content: 'Hi! I can help you manage your todos. Try saying things like "Add a todo to buy groceries" or "Show me my high priority tasks".'
-    }
-  ])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([])
   const [streamingStatus, setStreamingStatus] = useState<string>('')
   const [currentIteration, setCurrentIteration] = useState<number>(0)
   const [maxIterations, setMaxIterations] = useState<number>(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const hasLoadedHistory = useRef(false)
+
+  // Load conversation from localStorage on mount
+  useEffect(() => {
+    if (!hasLoadedHistory.current) {
+      hasLoadedHistory.current = true
+      const savedMessages = localStorage.getItem('chat-messages')
+      const savedHistory = localStorage.getItem('chat-history')
+
+      if (savedMessages) {
+        try {
+          const parsed = JSON.parse(savedMessages)
+          setMessages(parsed)
+        } catch (e) {
+          // If parsing fails, use default welcome message
+          setMessages([{
+            role: 'assistant',
+            content: 'Hi! I can help you manage your todos. Try saying things like "Add a todo to buy groceries" or "Show me my high priority tasks".'
+          }])
+        }
+      } else {
+        // No saved messages, use default welcome
+        setMessages([{
+          role: 'assistant',
+          content: 'Hi! I can help you manage your todos. Try saying things like "Add a todo to buy groceries" or "Show me my high priority tasks".'
+        }])
+      }
+
+      if (savedHistory) {
+        try {
+          const parsed = JSON.parse(savedHistory)
+          setConversationHistory(parsed)
+        } catch (e) {
+          console.error('Failed to parse saved history:', e)
+        }
+      }
+    }
+  }, [])
+
+  // Save conversation to localStorage whenever it changes
+  useEffect(() => {
+    if (hasLoadedHistory.current && messages.length > 0) {
+      localStorage.setItem('chat-messages', JSON.stringify(messages))
+    }
+  }, [messages])
+
+  useEffect(() => {
+    if (hasLoadedHistory.current && conversationHistory.length > 0) {
+      localStorage.setItem('chat-history', JSON.stringify(conversationHistory))
+    }
+  }, [conversationHistory])
 
   // Auto-scroll to bottom on new messages
   const scrollToBottom = () => {
@@ -132,7 +178,7 @@ export function StreamingConversationalInterface({
                   case 'iteration':
                     setCurrentIteration(event.iteration || 0)
                     setMaxIterations(event.maxIterations || 3)
-                    setStreamingStatus(event.message || `Step ${event.iteration}`)
+                    setStreamingStatus(event.message || 'Processing...')
                     break
 
                   case 'tools':
@@ -327,11 +373,34 @@ export function StreamingConversationalInterface({
             {isLoading ? 'Processing...' : 'Send'}
           </Button>
         </div>
-        {conversationHistory.length > 0 && (
-          <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            Context: {Math.floor(conversationHistory.length / 2)} messages
-          </div>
-        )}
+        <div className="flex justify-between items-center mt-2">
+          {conversationHistory.length > 0 && (
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              Context: {Math.floor(conversationHistory.length / 2)} messages
+            </div>
+          )}
+          {messages.length > 1 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const confirmClear = window.confirm('Clear conversation history? This cannot be undone.')
+                if (confirmClear) {
+                  setMessages([{
+                    role: 'assistant',
+                    content: 'Hi! I can help you manage your todos. Try saying things like "Add a todo to buy groceries" or "Show me my high priority tasks".'
+                  }])
+                  setConversationHistory([])
+                  localStorage.removeItem('chat-messages')
+                  localStorage.removeItem('chat-history')
+                }
+              }}
+              className="text-xs"
+            >
+              Clear Chat
+            </Button>
+          )}
+        </div>
       </form>
     </div>
   )

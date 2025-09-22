@@ -240,37 +240,96 @@ NEXT_PUBLIC_APP_URL=xxx
 - SSL certificate (automatic with most platforms)
 
 ## Consultation Log
-*Multi-agent review attempted but models encountered file access issues. Proceeding with direct analysis.*
 
-### Additional Considerations (Based on Analysis)
+### Multi-Agent Review Results
 
-#### Critical Deployment Decisions
+**GPT-5 Review (Score: 7/10)** - Comprehensive technical analysis
+**Gemini Pro Review (Score: 8/10)** - Strategic architectural recommendations
 
-1. **MCP Server Architecture for Production**
-   - **Option 1: Embed Tools Directly** - Rewrite MCP tools as Next.js API functions (recommended for Vercel)
-   - **Option 2: Queue-Based Processing** - Use message queue (Redis/BullMQ) for long-running operations
-   - **Option 3: Separate Microservice** - Deploy MCP server separately on Railway/Fly.io
+### Key Consensus Points from Expert Review
 
-2. **Authentication Strategy**
-   - Start without auth for MVP deployment
-   - Plan for NextAuth.js integration in Phase 2
-   - Consider session-based todos initially
+Both experts identified the MCP server adaptation as the critical challenge, with GPT-5 emphasizing security/operational concerns and Gemini Pro advocating for a hybrid architecture.
 
-3. **Rate Limiting Implementation**
-   - Essential before public deployment
-   - Use Vercel Edge Middleware or Upstash Redis
-   - Limits: 100 requests/minute for API, 10 requests/minute for AI chat
+#### 1. MCP Server Architecture - CRITICAL DECISION
 
-#### Revised Recommendation
+**Strong Consensus: Hybrid Model Recommended**
+- **GPT-5**: "MCP stdio process not viable on serverless. Separate microservice recommended."
+- **Gemini Pro**: "Hybrid model deserves primary consideration, not just as fallback."
 
-**Deploy to Vercel with these adaptations:**
-1. Refactor MCP tools to be native Next.js API functions
-2. Use Neon or Vercel Postgres for database
-3. Implement Upstash Redis for rate limiting and session storage
-4. Add Sentry for error tracking
-5. Use Vercel KV for conversation history caching
+**Recommended Architecture:**
+- Frontend + Simple APIs on Vercel
+- MCP Server as separate service on Railway/Fly.io
+- Secure server-to-server communication
+- Benefits: No timeout constraints, proper process management, independent scaling
 
-**Deployment Phases:**
-1. **Phase 1**: Basic deployment without auth (1-2 days)
-2. **Phase 2**: Add rate limiting and monitoring (1 day)
-3. **Phase 3**: Production hardening and optimization (1-2 days)
+#### 2. Security Requirements - HIGH PRIORITY
+
+**Both Experts Strongly Recommend:**
+- **Authentication from Day 1** (not Phase 2)
+  - GPT-5: "High abuse risk without auth for Anthropic spend"
+  - Gemini Pro: "Session-based identification foundational for security"
+- **Aggressive Rate Limiting**
+  - 30 req/min general API, 3-5 req/min for AI chat (tighter than originally planned)
+- **Additional Security:**
+  - Cloudflare Turnstile for bot protection
+  - CSP headers and markdown sanitization
+  - Input validation with Zod
+  - Tool input sanitization to prevent prompt injection
+
+#### 3. Database & Connection Management
+
+**Critical Requirements Identified:**
+- Use serverless-optimized drivers (@neondatabase/serverless)
+- Avoid node-postgres pooling in serverless
+- Co-locate DB and function regions
+- Implement migration pipeline via CI/CD
+- Enable Point-in-Time Recovery
+
+#### 4. Timeout & Cost Management
+
+**Consensus on Async Architecture:**
+- Queue-based processing for operations >30s
+- Implement job IDs with SSE status updates
+- Set strict token budgets and tool timeouts
+- Cost alerts and spending limits essential
+
+#### 5. Production Readiness Gaps
+
+**Must Address Before Launch:**
+- Backup and restore procedures tested
+- Monitoring: Sentry + metrics + uptime checks
+- Load testing (100 concurrent users minimum)
+- Graceful timeout handling
+- PII scrubbing in logs
+
+## Revised Recommendation Based on Expert Consensus
+
+### Primary Architecture: Hybrid Deployment
+
+**Phase 1: MVP with Auth (2-3 days)**
+- Deploy Next.js to Vercel
+- Deploy MCP server to Railway as separate service
+- Implement basic NextAuth.js (magic links or social)
+- PostgreSQL on Neon (co-located region)
+- Basic rate limiting with Upstash Redis
+
+**Phase 2: Security & Reliability (2 days)**
+- Add Cloudflare Turnstile
+- Implement comprehensive input validation
+- Add CSP headers and markdown sanitization
+- Set up monitoring (Sentry + uptime)
+- Configure backup/restore procedures
+
+**Phase 3: Production Optimization (2-3 days)**
+- Queue system for long operations
+- Cost monitoring and alerts
+- Load testing and optimization
+- Documentation and runbooks
+
+### Alternative: Full Vercel (If Hybrid Too Complex)
+
+Only if hybrid proves too complex initially:
+- Embed MCP tools directly in API routes
+- Accept 60s timeout limitations
+- Implement aggressive caching
+- Plan migration to hybrid for Phase 2
