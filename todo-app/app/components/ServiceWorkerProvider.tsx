@@ -40,6 +40,18 @@ export function ServiceWorkerProvider({ children }: { children: React.ReactNode 
         // Wait for the Service Worker to be ready
         await navigator.serviceWorker.ready;
         console.log('[SW-MCP] Service Worker is ready');
+
+        // Ensure the Service Worker is controlling the page
+        if (!navigator.serviceWorker.controller) {
+          console.log('[SW-MCP] Waiting for Service Worker to control the page...');
+          // If not controlling, reload the page to activate it
+          if (registration.active) {
+            console.log('[SW-MCP] Service Worker active but not controlling, reloading...');
+            window.location.reload();
+            return;
+          }
+        }
+
         setSwStatus('ready');
 
       } catch (error) {

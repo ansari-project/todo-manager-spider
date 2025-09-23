@@ -198,6 +198,12 @@ export function StreamingConversationalInterface({
                     setStreamingStatus('Executing tools...')
 
                     try {
+                      // Check if Service Worker is controlling
+                      if (!navigator.serviceWorker?.controller) {
+                        console.warn('[Chat] Service Worker not controlling page yet');
+                        // Fall back to server-side MCP endpoint
+                      }
+
                       const toolResults = []
 
                       for (const tool of event.tools || []) {
