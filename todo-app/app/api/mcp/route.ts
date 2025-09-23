@@ -7,7 +7,26 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     console.log('[MCP Fallback] Request received:', body.method)
 
-    // Return a basic JSON-RPC response
+    // If this is a tools/call request, return a retry message
+    if (body.method === 'tools/call') {
+      const toolName = body.params?.name || 'unknown'
+
+      // Return a proper tool result that indicates retry is needed
+      return NextResponse.json({
+        jsonrpc: '2.0',
+        id: body.id || null,
+        result: {
+          content: [{
+            type: 'text',
+            text: 'The todo service is still initializing. Please refresh the page and try again.'
+          }],
+          success: false,
+          retry: true
+        }
+      })
+    }
+
+    // For other requests, return a basic response
     return NextResponse.json({
       jsonrpc: '2.0',
       id: body.id || null,
