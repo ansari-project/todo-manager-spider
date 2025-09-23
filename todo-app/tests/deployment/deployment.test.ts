@@ -24,7 +24,7 @@ describe('Phase 5: Deployment Configuration', () => {
       const config = JSON.parse(fs.readFileSync(vercelConfigPath, 'utf-8'));
 
       const swHeader = config.headers?.find((h: any) =>
-        h.source === '/sw-mcp-complete.js'
+        h.source === '/sw-mcp-indexeddb.js'
       );
 
       expect(swHeader).toBeDefined();
@@ -34,20 +34,7 @@ describe('Phase 5: Deployment Configuration', () => {
       });
     });
 
-    it('should have headers for sql-wasm.wasm', () => {
-      const vercelConfigPath = path.join(process.cwd(), 'vercel.json');
-      const config = JSON.parse(fs.readFileSync(vercelConfigPath, 'utf-8'));
-
-      const wasmHeader = config.headers?.find((h: any) =>
-        h.source === '/sql-wasm.wasm'
-      );
-
-      expect(wasmHeader).toBeDefined();
-      expect(wasmHeader.headers).toContainEqual({
-        key: 'Content-Type',
-        value: 'application/wasm'
-      });
-    });
+    // Removed - no longer using sql-wasm with IndexedDB implementation
   });
 
   describe('Environment Variables', () => {
@@ -57,7 +44,7 @@ describe('Phase 5: Deployment Configuration', () => {
 
       const content = fs.readFileSync(envExamplePath, 'utf-8');
       expect(content).toContain('ANTHROPIC_API_KEY');
-      expect(content).toContain('DATABASE_URL');
+      // DATABASE_URL is optional - not required for IndexedDB
     });
   });
 
@@ -72,10 +59,7 @@ describe('Phase 5: Deployment Configuration', () => {
       expect(content).toContain('eslint');
       expect(content).toContain('ignoreDuringBuilds');
 
-      // Check for webpack fallbacks for sql.js
-      expect(content).toContain('webpack');
-      expect(content).toContain('fallback');
-      expect(content).toContain('fs: false');
+      // No longer need webpack fallbacks for IndexedDB implementation
     });
 
     it('should have proper TypeScript configuration', () => {
@@ -94,36 +78,21 @@ describe('Phase 5: Deployment Configuration', () => {
       expect(config.compilerOptions.jsx).toBe('preserve');
     });
 
-    it('should have sql.js type definitions', () => {
-      const typesPath = path.join(process.cwd(), 'types/sql.js.d.ts');
-      expect(fs.existsSync(typesPath)).toBe(true);
-
-      const content = fs.readFileSync(typesPath, 'utf-8');
-      expect(content).toContain('declare module');
-      expect(content).toContain('SqlJsStatic');
-      expect(content).toContain('Database');
-      expect(content).toContain('Statement');
-    });
+    // Removed - no longer using sql.js with IndexedDB implementation
   });
 
   describe('Static Assets', () => {
     it('should have Service Worker file in public', () => {
-      const swPath = path.join(process.cwd(), 'public/sw-mcp-complete.js');
+      const swPath = path.join(process.cwd(), 'public/sw-mcp-indexeddb.js');
       expect(fs.existsSync(swPath)).toBe(true);
 
       const content = fs.readFileSync(swPath, 'utf-8');
-      expect(content).toContain('MCP_TOOLS');
+      expect(content).toContain('tools/list');
       expect(content).toContain('handleMCPRequest');
+      expect(content).toContain('IndexedDB');
     });
 
-    it('should have sql-wasm.wasm in public', () => {
-      const wasmPath = path.join(process.cwd(), 'public/sql-wasm.wasm');
-      expect(fs.existsSync(wasmPath)).toBe(true);
-
-      // Check it's a binary file
-      const stats = fs.statSync(wasmPath);
-      expect(stats.size).toBeGreaterThan(0);
-    });
+    // Removed - no longer using sql-wasm with IndexedDB implementation
   });
 
   describe('Production Build', () => {
@@ -199,15 +168,7 @@ describe('Phase 5: Deployment Configuration', () => {
   });
 
   describe('Client-Side Configuration', () => {
-    it('should have proper WebAssembly support config', () => {
-      const configPath = path.join(process.cwd(), 'next.config.ts');
-      const content = fs.readFileSync(configPath, 'utf-8');
-
-      // Check webpack config for client-side
-      expect(content).toContain('!isServer');
-      expect(content).toContain('config.resolve.fallback');
-      expect(content).toContain('crypto: false');
-    });
+    // Removed WebAssembly config test - no longer needed with IndexedDB
 
     it('should handle streaming API correctly', () => {
       const streamRoute = path.join(process.cwd(), 'app/api/chat/stream/route.ts');
@@ -220,23 +181,24 @@ describe('Phase 5: Deployment Configuration', () => {
     });
   });
 
-  describe('Database Configuration', () => {
-    it('should support both SQLite and PostgreSQL via Drizzle', () => {
-      const schemaPath = path.join(process.cwd(), 'db/schema.ts');
-      expect(fs.existsSync(schemaPath)).toBe(true);
+  describe('IndexedDB Configuration', () => {
+    it('should use IndexedDB for client-side storage', () => {
+      const swPath = path.join(process.cwd(), 'public/sw-mcp-indexeddb.js');
+      const content = fs.readFileSync(swPath, 'utf-8');
 
-      const configPath = path.join(process.cwd(), 'drizzle.config.ts');
-      expect(fs.existsSync(configPath)).toBe(true);
+      // Check for IndexedDB usage
+      expect(content).toContain('indexedDB.open');
+      expect(content).toContain('todo-manager');
+      expect(content).toContain('objectStore');
     });
 
-    it('should have database migrations', () => {
-      const migrationsPath = path.join(process.cwd(), 'drizzle');
-      expect(fs.existsSync(migrationsPath)).toBe(true);
+    it('should have storage client for IndexedDB', () => {
+      const storagePath = path.join(process.cwd(), 'app/lib/storage-client.ts');
+      expect(fs.existsSync(storagePath)).toBe(true);
 
-      // Should have at least one migration file
-      const files = fs.readdirSync(migrationsPath);
-      const sqlFiles = files.filter(f => f.endsWith('.sql'));
-      expect(sqlFiles.length).toBeGreaterThan(0);
+      const content = fs.readFileSync(storagePath, 'utf-8');
+      expect(content).toContain('IndexedDB');
+      expect(content).toContain('todo-manager');
     });
   });
 });

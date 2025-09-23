@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
       console.log(`[${run_id}] Iteration ${iterations}`)
 
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 1024,
         temperature: 0,
         system: SYSTEM_PROMPT,
@@ -210,16 +210,23 @@ export async function POST(request: NextRequest) {
         tools: claudeTools as any,
       })
 
+      // Ensure we have a response and content is an array
+      if (!response || !response.content) {
+        console.error('[${run_id}] Invalid response from Anthropic:', response)
+        break
+      }
+      const responseContent = Array.isArray(response.content) ? response.content : [response.content]
+
       // Add assistant response to history and historyDelta
-      claudeMessages.push({ role: 'assistant', content: response.content })
-      historyDelta.push({ role: 'assistant', content: response.content as any })
+      claudeMessages.push({ role: 'assistant', content: responseContent })
+      historyDelta.push({ role: 'assistant', content: responseContent as any })
 
       // Check for tool use
-      const toolUses = response.content.filter((c: any) => c.type === 'tool_use')
+      const toolUses = responseContent.filter((c: any) => c.type === 'tool_use')
 
       if (toolUses.length === 0) {
         // No tools requested, we're done
-        const textContent = response.content.find((c: any) => c.type === 'text') as any
+        const textContent = responseContent.find((c: any) => c.type === 'text') as any
         finalResponse = textContent?.text || 'I processed your request.'
         break
       }
@@ -285,7 +292,7 @@ export async function POST(request: NextRequest) {
       console.log(`[${run_id}] Getting final response after ${iterations} iterations`)
 
       const concludeResponse = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 512,
         temperature: 0,
         system: SYSTEM_PROMPT,
