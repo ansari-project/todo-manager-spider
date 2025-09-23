@@ -1,7 +1,5 @@
 import { NextRequest } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { z } from 'zod'
 import {
   ChatRequestSchema,
@@ -10,356 +8,260 @@ import {
   validateRoleAlternation,
   formatMessagesForClaude
 } from '@/lib/chat-types'
-import { TodoFormatter } from '@/lib/todo-formatter'
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
 })
 
-// MCP client instance
-let mcpClient: Client | null = null
-let cachedTools: any[] | null = null
-let toolsCacheTime: number = 0
-const TOOLS_CACHE_TTL = 60000 // 1 minute cache
-
-async function getMCPClient() {
-  if (!mcpClient) {
-    const transport = new StdioClientTransport({
-      command: 'node',
-      args: ['dist/mcp/server.js'],
-    })
-
-    mcpClient = new Client({
-      name: 'todo-chat-client',
-      version: '1.0.0',
-    }, {
-      capabilities: {}
-    })
-
-    await mcpClient.connect(transport)
-  }
-  return mcpClient
-}
-
-async function getTools(client: Client) {
-  const now = Date.now()
-  if (cachedTools && (now - toolsCacheTime) < TOOLS_CACHE_TTL) {
-    return cachedTools
-  }
-
-  const toolsResponse = await client.request({
-    method: 'tools/list',
-    params: {}
-  }, z.object({
-    tools: z.array(z.object({
-      name: z.string(),
-      description: z.string(),
-      inputSchema: z.any()
-    }))
-  }) as any)
-
-  cachedTools = toolsResponse.tools || []
-  toolsCacheTime = now
-  return cachedTools
-}
-
-function convertMCPToolsToClaudeFormat(mcpTools: any[]) {
-  return mcpTools.map(tool => ({
-    name: tool.name,
-    description: tool.description,
-    input_schema: tool.inputSchema
-  }))
-}
-
-async function executeMCPTool(client: Client, name: string, args: any) {
-  const result = await client.request({
-    method: 'tools/call',
-    params: {
-      name,
-      arguments: args
-    }
-  }, z.any() as any)
-
-  // Format the result if it's a todo-related tool
-  if (['list_todos', 'get_todo', 'create_todo', 'update_todo'].includes(name)) {
-    const formatted = TodoFormatter.extractFromToolResult(JSON.stringify(result))
-    if (formatted.success) {
-      return {
-        ...result,
-        _formatted: formatted.message
+// Tool definitions for Claude
+const claudeTools = [
+  {
+    name: 'todo_list',
+    description: 'List todos with optional filtering',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        status: {
+          type: 'string' as const,
+          enum: ['pending', 'in_progress', 'completed', 'cancelled'],
+          description: 'Filter by status'
+        },
+        priority: {
+          type: 'string' as const,
+          enum: ['low', 'medium', 'high'],
+          description: 'Filter by priority'
+        }
       }
     }
+  },
+  {
+    name: 'todo_create',
+    description: 'Create a new todo item',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        title: {
+          type: 'string' as const,
+          description: 'Todo title'
+        },
+        description: {
+          type: 'string' as const,
+          description: 'Todo description'
+        },
+        priority: {
+          type: 'string' as const,
+          enum: ['low', 'medium', 'high'],
+          description: 'Priority level'
+        }
+      },
+      required: ['title']
+    }
+  },
+  {
+    name: 'todo_update',
+    description: 'Update an existing todo',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        id: {
+          type: 'string' as const,
+          description: 'Todo ID'
+        },
+        title: {
+          type: 'string' as const,
+          description: 'New title'
+        },
+        description: {
+          type: 'string' as const,
+          description: 'New description'
+        },
+        status: {
+          type: 'string' as const,
+          enum: ['pending', 'in_progress', 'completed', 'cancelled'],
+          description: 'New status'
+        },
+        priority: {
+          type: 'string' as const,
+          enum: ['low', 'medium', 'high'],
+          description: 'New priority'
+        }
+      },
+      required: ['id']
+    }
+  },
+  {
+    name: 'todo_delete',
+    description: 'Delete a todo',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        id: {
+          type: 'string' as const,
+          description: 'Todo ID'
+        }
+      },
+      required: ['id']
+    }
   }
+]
 
-  return result
-}
-
-const SYSTEM_PROMPT = `You are a helpful Todo Manager assistant operating with tools.
+// System prompt for Claude
+const SYSTEM_PROMPT = `You are a helpful todo management assistant. You can help users manage their todos using the available tools.
 
 CRITICAL RULES:
 1. ALWAYS use tools before making claims about todos - never guess or assume
-2. When listing todos, include the EXACT titles and IDs from tool_result
-3. When confirming actions, cite the SPECIFIC changes from tool_result
-4. Use the _formatted field in tool results when available for better readability
-5. For multi-step requests, briefly state your plan before executing
-
-Evidence Requirements:
-- Before saying "you have X todos", you MUST call list_todos
-- Before saying "I created/updated/deleted", show the actual result
-- Include specific details: titles, IDs, status, priority from tool outputs
-- If a tool fails, report the exact error, don't pretend it succeeded
-- When tool results include _formatted, prefer using that for user-friendly output
-
-Formatting Guidelines:
-- Use status icons: ✅ completed, 🔄 in_progress, ⭕ pending, ❌ cancelled
-- Show priority with indicators: HIGH priority, medium (default), low priority
-- Include due dates when present, highlight if overdue with ⚠️
-- Group todos by status when listing multiple items
+2. When listing todos, include the EXACT titles and IDs from tool results
+3. When confirming actions, cite the SPECIFIC changes from tool results
+4. Be concise and helpful in your responses
 
 Available tools:
-- list_todos: List and filter todos
-- create_todo: Create new todos
-- update_todo: Update existing todos
-- delete_todo: Delete todos
-- get_todo: Get details of a specific todo`
+- todo_list: List and filter todos
+- todo_create: Create new todos
+- todo_update: Update existing todos
+- todo_delete: Delete todos`
 
-function dedupeKey(name: string, args: any): string {
-  return `${name}:${JSON.stringify(args)}`
-}
+// Note: Tool execution happens on the client side via Service Worker
+// The server just returns tool requests for the client to execute
 
 // Streaming response encoder
 const encoder = new TextEncoder()
 
 export async function POST(request: NextRequest) {
-  const startTime = Date.now()
-  const controller = new AbortController()
-  let timeout: NodeJS.Timeout | undefined
-
-  // Create a ReadableStream for streaming responses
   const stream = new ReadableStream({
-    async start(streamController) {
+    async start(controller) {
       try {
-        // Parse and validate request
+        // Parse request
         const body = await request.json()
         const parsed = ChatRequestSchema.safeParse(body)
 
         if (!parsed.success) {
-          streamController.enqueue(encoder.encode(
-            `data: ${JSON.stringify({ error: 'Invalid request', details: parsed.error.flatten() })}\n\n`
+          controller.enqueue(encoder.encode(
+            `data: ${JSON.stringify({
+              type: 'error',
+              error: 'Invalid request',
+              details: parsed.error.flatten()
+            })}\n\n`
           ))
-          streamController.close()
+          controller.close()
           return
         }
 
-        const { message, history, requestId, maxIterations } = parsed.data
-        const run_id = parsed.data.run_id || generateRunId(requestId)
+        const { message, history } = parsed.data
+        const run_id = parsed.data.run_id || generateRunId(parsed.data.requestId)
 
-        // Send initial acknowledgment
-        streamController.enqueue(encoder.encode(
-          `data: ${JSON.stringify({ type: 'start', run_id, message: 'Processing your request...' })}\n\n`
+        // Send start event
+        controller.enqueue(encoder.encode(
+          `data: ${JSON.stringify({
+            type: 'start',
+            run_id,
+            message: 'Processing your request...'
+          })}\n\n`
         ))
 
-        // Validate role alternation
+        // Validate history
         if (!validateRoleAlternation(history)) {
-          streamController.enqueue(encoder.encode(
-            `data: ${JSON.stringify({ error: 'Invalid conversation history: roles must alternate' })}\n\n`
+          controller.enqueue(encoder.encode(
+            `data: ${JSON.stringify({
+              type: 'error',
+              error: 'Invalid conversation history'
+            })}\n\n`
           ))
-          streamController.close()
+          controller.close()
           return
         }
 
-        // Get MCP client and tools
-        const client = await getMCPClient()
-        const mcpTools = await getTools(client)
-        const claudeTools = convertMCPToolsToClaudeFormat(mcpTools || [])
+        // Check API key
+        if (!process.env.ANTHROPIC_API_KEY) {
+          // Provide a simple response without Claude
+          const response = "I can help you manage your todos! Use the form above to add todos, click the checkbox to complete them, or use the trash icon to delete them."
 
-        // Build conversation with full history
-        const messages: ChatMessage[] = [...history]
+          controller.enqueue(encoder.encode(
+            `data: ${JSON.stringify({
+              type: 'complete',
+              response,
+              historyDelta: [
+                { role: 'user', content: message },
+                { role: 'assistant', content: response }
+              ]
+            })}\n\n`
+          ))
+          controller.close()
+          return
+        }
 
-        // Add current user message if not already in history
-        const lastMessage = messages[messages.length - 1]
-        if (!lastMessage || lastMessage.role !== 'user' || lastMessage.content !== message) {
+        // Build messages for Claude
+        const messages = [...history]
+        if (!messages.length || messages[messages.length - 1].role !== 'user' || messages[messages.length - 1].content !== message) {
           messages.push({ role: 'user', content: message })
         }
 
-        // Agentic loop implementation with streaming
-        const MAX_ITER = maxIterations
-        const DEADLINE_MS = 20000
-        const deadline = startTime + DEADLINE_MS
-        const executed = new Set<string>()
-        const toolsExecuted: string[] = []
-        let iterations = 0
+        // Create Claude message
+        const claudeMessages = formatMessagesForClaude(messages)
+
+        // Call Claude with tools
+        const response = await anthropic.messages.create({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 1024,
+          system: SYSTEM_PROMPT,
+          messages: claudeMessages,
+          tools: claudeTools,
+        })
+
         let finalResponse = ''
-        const historyDelta: ChatMessage[] = []
+        const toolsExecuted: string[] = []
 
-        // Set up timeout
-        timeout = setTimeout(() => controller.abort(), DEADLINE_MS)
+        // Check if Claude wants to use tools
+        const hasToolUse = response.content.some(c => c.type === 'tool_use')
 
-        // Convert messages for Claude API
-        let claudeMessages = formatMessagesForClaude(messages)
+        if (hasToolUse) {
+          // Send tool requests to client for execution
+          const toolRequests = response.content
+            .filter(c => c.type === 'tool_use')
+            .map(c => ({
+              id: c.id,
+              name: c.name,
+              input: c.input
+            }))
 
-        while (iterations < MAX_ITER && Date.now() < deadline) {
-          iterations++
-
-          // Send iteration update
-          streamController.enqueue(encoder.encode(
+          controller.enqueue(encoder.encode(
             `data: ${JSON.stringify({
-              type: 'iteration',
-              iteration: iterations,
-              maxIterations: MAX_ITER,
-              message: `Thinking... (step ${iterations}/${MAX_ITER})`
+              type: 'tool_request',
+              tools: toolRequests,
+              assistantContent: response.content
             })}\n\n`
           ))
+        } else {
+          // No tools needed, just send the text response
+          const textContent = response.content.find(c => c.type === 'text')
+          finalResponse = textContent?.text || ''
 
-          const response = await anthropic.messages.create({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 1024,
-            temperature: 0,
-            system: SYSTEM_PROMPT,
-            messages: claudeMessages,
-            tools: claudeTools as any,
-          })
-
-          // Add assistant response to history
-          claudeMessages.push({ role: 'assistant', content: response.content })
-          historyDelta.push({ role: 'assistant', content: response.content as any })
-
-          // Check for tool use
-          const toolUses = response.content.filter((c: any) => c.type === 'tool_use')
-
-          if (toolUses.length === 0) {
-            // No tools requested, we're done
-            const textContent = response.content.find((c: any) => c.type === 'text') as any
-            finalResponse = textContent?.text || 'I processed your request.'
-            break
-          }
-
-          // Stream tool execution status
-          streamController.enqueue(encoder.encode(
+          // Send complete event
+          controller.enqueue(encoder.encode(
             `data: ${JSON.stringify({
-              type: 'tools',
-              tools: toolUses.map((t: any) => t.name),
-              message: `Executing ${toolUses.length} tool${toolUses.length > 1 ? 's' : ''}...`
+              type: 'complete',
+              response: finalResponse,
+              toolsExecuted,
+              historyDelta: [
+                { role: 'user', content: message },
+                { role: 'assistant', content: finalResponse }
+              ]
             })}\n\n`
           ))
-
-          // Execute all tool uses in parallel
-          const toolResults = await Promise.all(
-            toolUses.map(async (toolUse: any) => {
-              const key = dedupeKey(toolUse.name, toolUse.input)
-
-              // Check for duplicate
-              if (executed.has(key)) {
-                return {
-                  type: 'tool_result',
-                  tool_use_id: toolUse.id,
-                  content: JSON.stringify({ error: 'Duplicate tool call skipped' }),
-                  is_error: true
-                }
-              }
-
-              executed.add(key)
-              toolsExecuted.push(toolUse.name)
-
-              try {
-                const result = await executeMCPTool(client, toolUse.name, toolUse.input)
-
-                // Stream individual tool completion
-                streamController.enqueue(encoder.encode(
-                  `data: ${JSON.stringify({
-                    type: 'tool_complete',
-                    tool: toolUse.name,
-                    message: `✓ ${toolUse.name} completed`
-                  })}\n\n`
-                ))
-
-                const content = result._formatted
-                  ? `${JSON.stringify(result)}\n\n[Formatted Output]:\n${result._formatted}`
-                  : JSON.stringify(result)
-
-                return {
-                  type: 'tool_result',
-                  tool_use_id: toolUse.id,
-                  content
-                }
-              } catch (error: any) {
-                return {
-                  type: 'tool_result',
-                  tool_use_id: toolUse.id,
-                  content: JSON.stringify({ error: error?.message || String(error) }),
-                  is_error: true
-                }
-              }
-            })
-          )
-
-          // Add tool results to conversation
-          claudeMessages.push({
-            role: 'user',
-            content: toolResults
-          })
-          historyDelta.push({
-            role: 'user',
-            content: toolResults as any
-          })
         }
 
-        // If we exited due to limits and don't have a final response, get one
-        if (!finalResponse) {
-          streamController.enqueue(encoder.encode(
-            `data: ${JSON.stringify({
-              type: 'finalizing',
-              message: 'Preparing response...'
-            })}\n\n`
-          ))
+        // Complete event is now sent in the response processing above
 
-          const concludeResponse = await anthropic.messages.create({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 512,
-            temperature: 0,
-            system: SYSTEM_PROMPT,
-            messages: claudeMessages,
-            tools: claudeTools as any
-          })
-
-          const textContent = concludeResponse.content.find((c: any) => c.type === 'text') as any
-          finalResponse = textContent?.text || 'I processed your request based on the available tool results.'
-        }
-
-        // Clear timeout
-        if (timeout) clearTimeout(timeout)
-
-        // Send final response
-        streamController.enqueue(encoder.encode(
-          `data: ${JSON.stringify({
-            type: 'complete',
-            response: finalResponse,
-            run_id,
-            iterations,
-            toolsExecuted: [...new Set(toolsExecuted)],
-            historyDelta,
-            duration: Date.now() - startTime
-          })}\n\n`
-        ))
-
-        streamController.close()
-
-      } catch (error: any) {
-        if (timeout) clearTimeout(timeout)
-
-        // Send error
-        streamController.enqueue(encoder.encode(
+      } catch (error) {
+        console.error('Chat API error:', error)
+        controller.enqueue(encoder.encode(
           `data: ${JSON.stringify({
             type: 'error',
-            error: error.name === 'AbortError'
-              ? 'Request timed out after 20 seconds'
-              : 'Failed to process chat message',
-            details: error.message
+            error: error instanceof Error ? error.message : 'An error occurred'
           })}\n\n`
         ))
-
-        streamController.close()
+      } finally {
+        controller.close()
       }
     }
   })

@@ -5,9 +5,6 @@ import { TodoForm } from './components/TodoForm'
 import { TodoList } from './components/TodoList'
 import { StreamingConversationalInterface } from './components/StreamingConversationalInterface'
 import { ThemeToggle } from './components/ThemeToggle'
-import { MCPTestButton } from './components/MCPTestButton'
-import { SQLiteTestButton } from './components/SQLiteTestButton'
-import { MCPDemo } from './components/MCPDemo'
 import { todos as todoStorage } from './lib/storage-client'
 import { Todo } from '@/db/types'
 import { CreateTodoInput } from './lib/validators'
@@ -130,14 +127,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Test Buttons (for demo/development) */}
-      {process.env.NODE_ENV === 'development' && (
-        <>
-          <MCPTestButton />
-          <SQLiteTestButton />
-          <MCPDemo />
-        </>
-      )}
     </div>
   )
 }

@@ -19,7 +19,7 @@ export function ServiceWorkerProvider({ children }: { children: React.ReactNode 
       try {
         console.log('[SW-MCP] Registering Service Worker...');
 
-        const registration = await navigator.serviceWorker.register('/sw-mcp-complete.js', {
+        const registration = await navigator.serviceWorker.register('/sw-mcp-indexeddb.js', {
           scope: '/'
         });
 
@@ -32,7 +32,6 @@ export function ServiceWorkerProvider({ children }: { children: React.ReactNode 
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 console.log('[SW-MCP] New Service Worker available, reload to update');
-                // In production, we might show a notification to the user
               }
             });
           }
@@ -72,15 +71,5 @@ export function ServiceWorkerProvider({ children }: { children: React.ReactNode 
     }
   }
 
-  return (
-    <>
-      {children}
-      {/* Optional: Show Service Worker status banner in demo mode */}
-      {swStatus === 'unsupported' && (
-        <div className="fixed bottom-4 right-4 bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
-          ⚠️ Browser doesn't support Service Workers. Some features may be limited.
-        </div>
-      )}
-    </>
-  );
+  return <>{children}</>;
 }

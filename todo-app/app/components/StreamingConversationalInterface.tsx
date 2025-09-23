@@ -13,19 +13,20 @@ interface StreamingConversationalInterfaceProps {
 }
 
 interface StreamEvent {
-  type: 'start' | 'iteration' | 'tools' | 'tool_complete' | 'finalizing' | 'complete' | 'error'
+  type: 'start' | 'iteration' | 'tools' | 'tool_complete' | 'finalizing' | 'complete' | 'error' | 'tool_request'
   message?: string
   response?: string
   run_id?: string
   iterations?: number
   iteration?: number
   maxIterations?: number
-  tools?: string[]
+  tools?: any[] // Tool request objects
   tool?: string
   toolsExecuted?: string[]
   historyDelta?: ChatMessage[]
   error?: string
   duration?: number
+  assistantContent?: any[] // Claude's content including tool use
 }
 
 export function StreamingConversationalInterface({
@@ -96,6 +97,17 @@ export function StreamingConversationalInterface({
   // Auto-scroll to bottom on new messages
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  // Clear conversation handler
+  const handleClearConversation = () => {
+    setMessages([{
+      role: 'assistant',
+      content: 'Hi! I can help you manage your todos. Try saying things like "Add a todo to buy groceries" or "Show me my high priority tasks".'
+    }])
+    setConversationHistory([])
+    localStorage.removeItem('chat-messages')
+    localStorage.removeItem('chat-history')
   }
 
   useEffect(() => {
@@ -179,6 +191,87 @@ export function StreamingConversationalInterface({
                     setCurrentIteration(event.iteration || 0)
                     setMaxIterations(event.maxIterations || 3)
                     setStreamingStatus(event.message || 'Processing...')
+                    break
+
+                  case 'tool_request':
+                    // Execute tools via Service Worker MCP
+                    setStreamingStatus('Executing tools...')
+
+                    try {
+                      const toolResults = []
+
+                      for (const tool of event.tools || []) {
+                        setStreamingStatus(`Executing ${tool.name}...`)
+
+                        // Call MCP via Service Worker
+                        // Use absolute URL to ensure proper context
+                        const mcpUrl = typeof window !== 'undefined'
+                          ? `${window.location.origin}/api/mcp/`
+                          : '/api/mcp/'
+
+                        const mcpResponse = await fetch(mcpUrl, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            jsonrpc: '2.0',
+                            method: 'tools/call',
+                            params: {
+                              name: tool.name, // Keep the original name, SW handles both formats
+                              arguments: tool.input
+                            },
+                            id: Date.now()
+                          })
+                        })
+
+                        const mcpResult = await mcpResponse.json()
+
+                        toolResults.push({
+                          tool_use_id: tool.id,
+                          content: mcpResult.result || mcpResult.error || 'Tool execution failed'
+                        })
+                      }
+
+                      // Continue conversation with tool results
+                      setStreamingStatus('Processing results...')
+
+                      const continueResponse = await fetch('/api/chat/continue', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          messages: [...conversationHistory, userMsg, {
+                            role: 'assistant',
+                            content: event.assistantContent
+                          }],
+                          toolResults
+                        })
+                      })
+
+                      const continueResult = await continueResponse.json()
+
+                      // Add final response
+                      const assistantMsg: ChatMessage = {
+                        role: 'assistant',
+                        content: continueResult.response
+                      }
+                      setMessages(prev => [...prev, assistantMsg])
+                      setConversationHistory(prev => [...prev, userMsg, assistantMsg])
+
+                      // Notify parent to refresh todos
+                      if (onTodosChanged) {
+                        onTodosChanged()
+                      }
+
+                      setIsLoading(false)
+                      setStreamingStatus('')
+                    } catch (error) {
+                      console.error('Tool execution error:', error)
+                      setMessages(prev => [...prev, {
+                        role: 'assistant',
+                        content: 'Sorry, there was an error executing the requested action.'
+                      }])
+                      setIsLoading(false)
+                      setStreamingStatus('')
+                    }
                     break
 
                   case 'tools':
@@ -386,13 +479,7 @@ export function StreamingConversationalInterface({
               onClick={() => {
                 const confirmClear = window.confirm('Clear conversation history? This cannot be undone.')
                 if (confirmClear) {
-                  setMessages([{
-                    role: 'assistant',
-                    content: 'Hi! I can help you manage your todos. Try saying things like "Add a todo to buy groceries" or "Show me my high priority tasks".'
-                  }])
-                  setConversationHistory([])
-                  localStorage.removeItem('chat-messages')
-                  localStorage.removeItem('chat-history')
+                  handleClearConversation()
                 }
               }}
               className="text-xs"

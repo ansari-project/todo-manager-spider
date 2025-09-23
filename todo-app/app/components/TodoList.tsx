@@ -1,7 +1,7 @@
 'use client'
 
 import { TodoItem } from './TodoItem'
-import { Todo } from '@/db/schema'
+import { Todo } from '@/db/types'
 
 interface TodoListProps {
   todos: Todo[]

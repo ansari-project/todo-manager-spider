@@ -53,9 +53,16 @@ export const todos = {
       const request = store.getAll();
       request.onsuccess = () => {
         const todos = request.result as Todo[];
-        // Sort by createdAt descending
-        todos.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-        resolve(todos);
+        // Convert date strings to Date objects and sort by createdAt descending
+        const processedTodos = todos.map(todo => ({
+          ...todo,
+          createdAt: typeof todo.createdAt === 'string' ? new Date(todo.createdAt) : todo.createdAt,
+          updatedAt: typeof todo.updatedAt === 'string' ? new Date(todo.updatedAt) : todo.updatedAt,
+          completedAt: todo.completedAt ? (typeof todo.completedAt === 'string' ? new Date(todo.completedAt) : todo.completedAt) : null,
+          dueDate: todo.dueDate ? (typeof todo.dueDate === 'string' ? new Date(todo.dueDate) : todo.dueDate) : null
+        }));
+        processedTodos.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        resolve(processedTodos);
       };
       request.onerror = () => reject(request.error);
     });
