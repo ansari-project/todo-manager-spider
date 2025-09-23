@@ -271,6 +271,11 @@ export function StreamingConversationalInterface({
                         // Execute additional tools
                         const moreToolResults = []
 
+                        // Use absolute URL to ensure proper context
+                        const mcpUrl = typeof window !== 'undefined'
+                          ? `${window.location.origin}/api/mcp/`
+                          : '/api/mcp/'
+
                         for (const tool of continueResult.toolRequests || []) {
                           setStreamingStatus(`Executing ${tool.name}...`)
 
