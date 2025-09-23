@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Extract text response
-    const textContent = response.content.find((c: any) => c.type === 'text')
+    const textContent = response.content.find((c: any) => c.type === 'text') as any
     const finalResponse = textContent?.text || "I've completed that task for you."
 
     return NextResponse.json({
