@@ -19,7 +19,7 @@ export function ServiceWorkerProvider({ children }: { children: React.ReactNode 
       try {
         console.log('[SW-MCP] Registering Service Worker...');
 
-        const registration = await navigator.serviceWorker.register('/sw-mcp-sqlite.js', {
+        const registration = await navigator.serviceWorker.register('/sw-mcp-complete.js', {
           scope: '/'
         });
 

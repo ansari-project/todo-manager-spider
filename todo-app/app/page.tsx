@@ -7,6 +7,7 @@ import { StreamingConversationalInterface } from './components/StreamingConversa
 import { ThemeToggle } from './components/ThemeToggle'
 import { MCPTestButton } from './components/MCPTestButton'
 import { SQLiteTestButton } from './components/SQLiteTestButton'
+import { MCPDemo } from './components/MCPDemo'
 import { Todo } from '@/db/schema'
 import { CreateTodoInput } from './lib/validators'
 
@@ -146,6 +147,7 @@ export default function Home() {
         <>
           <MCPTestButton />
           <SQLiteTestButton />
+          <MCPDemo />
         </>
       )}
     </div>
