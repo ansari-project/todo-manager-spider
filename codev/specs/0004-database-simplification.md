@@ -121,5 +121,41 @@ For future production use:
 - **Lessons**: 0003-web-deployment.md
 - **Implementation**: `app/lib/storage-client.ts`
 
+## Service Worker MCP Integration (Added 2025-09-23)
+
+### Architecture Evolution
+After simplifying to IndexedDB, we further innovated with Service Worker as local MCP server:
+
+#### Implementation
+1. **Service Worker** (`public/sw-mcp-indexeddb.js`)
+   - Intercepts `/api/mcp/*` requests
+   - Implements full MCP protocol locally
+   - Direct IndexedDB operations
+   - Zero-latency tool execution
+
+2. **Key Innovations**
+   - No server-side MCP needed
+   - Works completely offline
+   - Clean protocol separation
+   - Browser-native solution
+
+3. **Technical Details**
+   - JSON-RPC 2.0 protocol handling
+   - Tool naming: underscore format (todo_list, todo_create)
+   - Date handling: ISO strings for compatibility
+   - User-friendly formatting without IDs
+
+### Challenges Overcome
+1. **Service Worker Caching**: Version bumping for updates
+2. **Database Sync**: Matching DB names and schemas
+3. **Date Formats**: Converting between strings and Date objects
+4. **Tool Naming**: Standardized to underscores throughout
+
+### Benefits
+- ✅ True offline-first architecture
+- ✅ Zero server dependencies for todos
+- ✅ Clean MCP protocol implementation
+- ✅ Instant tool execution
+
 ## Status
-**Completed** - Database simplified to IndexedDB, deployed successfully
+**Completed** - Database simplified to IndexedDB with Service Worker MCP, deployed successfully

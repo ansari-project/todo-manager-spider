@@ -135,8 +135,65 @@ This simplification demonstrates that **constraints drive innovation**. The Verc
 
 **Key Takeaway**: Don't default to complex architectures. Start simple, validate deployment early, and add complexity only when user requirements demand it.
 
+## Service Worker MCP Implementation (Added 2025-09-23)
+
+### Additional Lessons from Service Worker Integration
+
+#### 1. Service Workers as Local Servers
+**Discovery**: Service Workers can act as full protocol servers
+**Implementation**: Intercepted `/api/mcp/*` requests and handled MCP protocol locally
+**Benefit**: Zero-latency tool execution, works offline
+
+#### 2. Cache Invalidation is Critical
+**Problem**: Browsers aggressively cache Service Workers
+**Solution**: Version bumping (SW_VERSION constant) forces updates
+**Learning**: Always include versioning strategy for Service Workers
+
+#### 3. Data Format Consistency
+**Challenge**: Service Worker stored dates as ISO strings, app expected Date objects
+**Solution**: Convert at boundaries (storage-client.ts)
+**Learning**: Define clear data contracts between layers
+
+#### 4. Naming Convention Matters
+**Issue**: Claude API rejected dot notation (todo.list)
+**Fix**: Standardized to underscores (todo_list)
+**Learning**: Validate naming patterns against all system requirements early
+
+#### 5. Debugging Service Workers is Complex
+**Tools Needed**:
+- Chrome DevTools Application tab
+- Test pages for direct SW testing
+- Verbose logging with versions
+- Clear Service Worker refresh strategy
+
+### Architecture Benefits Realized
+
+1. **True Offline-First**:
+   - All todo operations work without network
+   - MCP protocol runs entirely client-side
+   - Perfect for PWA conversion
+
+2. **Clean Separation**:
+   - Server handles LLM interaction only
+   - Client owns all data operations
+   - Service Worker bridges the gap
+
+3. **Performance Gains**:
+   - No network round-trips for todo operations
+   - Instant tool execution
+   - Reduced server load
+
+### Future Enhancements
+
+1. **Service Worker Sync API**: Background sync when online
+2. **Push Notifications**: Alert on todo due dates
+3. **PWA Conversion**: Full offline app capability
+4. **WebRTC Sync**: P2P todo sharing
+
 ## Related Documents
 - **Specification**: 0004-database-simplification.md
 - **Plan**: 0004-database-simplification.md
 - **Tests**: tests/storage-client.test.ts
 - **Implementation**: app/lib/storage-client.ts
+- **Service Worker**: public/sw-mcp-indexeddb.js
+- **Test Page**: public/sw-test.html
