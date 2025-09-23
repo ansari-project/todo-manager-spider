@@ -3,155 +3,192 @@
 ## Plan ID: 0003
 
 ## Overview
-Deploy the Todo Manager demonstration app to Vercel with client-side SQLite, showcasing the SPIDER protocol methodology.
+Deploy the Todo Manager demonstration app to Vercel with Service Worker MCP architecture, showcasing the SPIDER protocol methodology through an innovative browser-based MCP implementation.
 
-## Simplifications from Original Architecture
+## Architecture: Service Worker as Local MCP Server
+
+### Innovation Summary
+Instead of traditional server-side MCP or client orchestration, we implement the MCP server directly in a Service Worker. This enables:
+- Full MCP protocol compliance
+- Access to client-side SQLite database
+- Zero server infrastructure for data
+- Works offline once cached
+- 92% browser compatibility
 
 ### What We Can Remove/Simplify:
-1. **Database Server** - Using client-side SQLite instead
+1. **Database Server** - Using client-side SQLite via sql.js
 2. **Database Migrations** - No server migrations needed
 3. **Connection Pooling** - No connections to manage
 4. **Authentication** - Not needed for demo
 5. **Rate Limiting** - Not needed for demo
 6. **User Management** - Each browser is its own instance
-7. **API Routes for Todos** - All todo operations run client-side
-8. **Drizzle ORM on Server** - Move to client or simplify
+7. **Server API Routes for Todos** - All operations via Service Worker
+8. **Drizzle ORM on Server** - Client-side only
 9. **Environment Complexity** - Only need Anthropic API key
 
 ### What We Keep:
-1. **Todo CRUD Operations** - Now client-side
+1. **Todo CRUD Operations** - Via Service Worker MCP
 2. **Conversational Interface** - Server-side for Anthropic API
-3. **MCP Tools** - Converted to HTTP transport
+3. **MCP Protocol** - Full implementation in Service Worker
 4. **Dark Mode** - Already working
 5. **Markdown Support** - Already working
-6. **Conversation Persistence** - Already using localStorage
+6. **Conversation Persistence** - localStorage + IndexedDB
 
 ## Implementation Phases
 
-### Phase 1: Client-Side SQLite Integration
-**Objective**: Replace server SQLite with browser-based SQLite
+### Phase 1: Service Worker Setup and Registration
+**Objective**: Create Service Worker infrastructure for MCP implementation
 
 **Deliverables**:
-- Integrate sql.js library with Web Worker
-- Create browser SQLite adapter with auto-save
-- Add IndexedDB detection and fallback
-- Migrate todo operations to client-side
-- Store database in IndexedDB with debounce
-- Add schema versioning for future updates
-- Test all CRUD operations work locally
-- Remove server-side database code
+- Create `public/sw-mcp.js` Service Worker file
+- Add Service Worker registration in `_app.tsx`
+- Implement request interception for `/api/mcp/*` routes
+- Add Service Worker lifecycle management
+- Create fallback for unsupported browsers
+- Set up caching strategy for offline support
+- Add Service Worker update mechanism
 
 **Success Criteria**:
-- All todo operations work without server calls
-- Data persists across page refreshes
-- Export/import database functionality works
-- No server database dependencies remain
+- Service Worker successfully registers
+- Intercepts `/api/mcp/*` requests
+- Graceful fallback for unsupported browsers
+- Update notifications work
 
 **Dependencies**: None - can start immediately
 
-**Commit Message**: `[Spec 0003][Phase: client-sqlite] feat: Implement client-side SQLite with sql.js`
+**Commit Message**: `[Spec 0003][Phase 1: service-worker] feat: Set up Service Worker infrastructure`
 
-### Phase 2: Client-Side Tool Orchestration
-**Objective**: Enable AI to trigger client-side todo operations
+### Phase 2: Client-Side SQLite with sql.js
+**Objective**: Implement browser-based SQLite database
 
 **Deliverables**:
-- Create client-side tool execution system
-- Modify chat API to return tool requests to client
-- Implement client-side tool handlers for todo operations
-- Client sends tool results back to continue conversation
-- Remove stdio-based MCP server
-- Test all conversational commands work
+- Install and configure sql.js WebAssembly module
+- Create SQLite database manager in Web Worker
+- Implement IndexedDB persistence layer
+- Add auto-save with debouncing
+- Migrate Drizzle ORM to work with sql.js
+- Create database export/import utilities
+- Handle private browsing mode (memory-only fallback)
+- Add progress indicators for WASM loading
 
 **Success Criteria**:
-- AI can request todo operations
-- Client executes tools against local SQLite
-- Tool results flow back to complete AI response
-- No server-side database access needed
+- SQLite runs in browser via WebAssembly
+- Data persists in IndexedDB
+- Drizzle ORM works with client SQLite
+- Export/import functionality works
+- ~1MB WASM loads efficiently
 
-**Dependencies**: None - independent of Phase 1
+**Dependencies**: Phase 1 (Service Worker ready)
 
-**Commit Message**: `[Spec 0003][Phase: mcp-http] feat: Convert MCP to HTTP transport`
+**Commit Message**: `[Spec 0003][Phase 2: client-sqlite] feat: Implement client-side SQLite with sql.js`
 
-### Phase 3: Simplify API Surface
-**Objective**: Remove unnecessary server endpoints and simplify architecture
+### Phase 3: MCP Protocol Implementation in Service Worker
+**Objective**: Implement full MCP protocol in the Service Worker
 
 **Deliverables**:
-- Remove /api/todos routes (all client-side now)
-- Simplify /api/chat to only handle AI operations
-- Remove database configuration files
-- Clean up unused dependencies
-- Update types and interfaces
+- Implement MCP JSON-RPC 2.0 protocol handler
+- Create `initialize` method handler
+- Create `tools/list` method to expose todo tools
+- Create `tools/call` method for tool execution
+- Define todo tool schemas (create, update, delete, list)
+- Connect tools to SQLite database operations
+- Add proper error handling and responses
+- Implement MCP protocol version negotiation
 
 **Success Criteria**:
-- Only essential API routes remain (/api/chat, /api/mcp)
-- No database-related server code
-- Package.json cleaned of unused dependencies
-- Build size reduced
+- Full MCP protocol compliance
+- All MCP methods respond correctly
+- Tools execute against local SQLite
+- Proper JSON-RPC error handling
+- Protocol version compatibility
 
-**Dependencies**: Phases 1 and 2 complete
+**Dependencies**: Phase 2 (SQLite ready)
 
-**Commit Message**: `[Spec 0003][Phase: simplify] refactor: Remove server-side todo operations`
+**Commit Message**: `[Spec 0003][Phase 3: mcp-protocol] feat: Implement MCP protocol in Service Worker`
 
-### Phase 4: Vercel Deployment
-**Objective**: Deploy to Vercel with minimal configuration
+### Phase 4: Connect Chat API to Service Worker MCP
+**Objective**: Integrate the conversational interface with Service Worker MCP
 
 **Deliverables**:
-- Create vercel.json if needed
-- Configure environment variables (just ANTHROPIC_API_KEY)
-- Deploy to Vercel
-- Test all features work in production
-- Update README with deployment instructions
+- Modify `/api/chat` to detect tool requests from Anthropic
+- Create MCP client that communicates with Service Worker
+- Implement tool request/response flow
+- Handle streaming responses with tool executions
+- Add fallback for browsers without Service Worker
+- Remove old server-side MCP implementation
+- Test all conversational commands
 
 **Success Criteria**:
-- App accessible via Vercel URL
-- All features work as in local development
-- No database errors (since no server DB)
-- Deployment completes in single command
+- AI can request todo operations via MCP
+- Service Worker executes tools locally
+- Results flow back to AI correctly
+- Streaming responses work with tools
+- Graceful degradation for unsupported browsers
 
-**Dependencies**: Phases 1-3 complete
+**Dependencies**: Phase 3 (MCP protocol ready)
 
-**Commit Message**: `[Spec 0003][Phase: deploy] feat: Deploy to Vercel`
+**Commit Message**: `[Spec 0003][Phase 4: integration] feat: Connect chat API to Service Worker MCP`
 
-### Phase 5: Polish and Documentation
-**Objective**: Improve UX and document the demonstration
+### Phase 5: Vercel Deployment and Polish
+**Objective**: Deploy to Vercel and add demo features
 
 **Deliverables**:
+- Configure Service Worker for production
+- Set up Vercel deployment settings
+- Configure ANTHROPIC_API_KEY environment variable
 - Add database export/import UI
 - Add "Demo Mode" banner explaining local storage
 - Create deployment guide
-- Document SPIDER protocol usage
 - Add reset/clear data button
-- Optional: Add sample todos on first load
+- Add sample todos on first load
+- Test all features in production
 
 **Success Criteria**:
-- Users understand data is local-only
-- Easy to reset for fresh demos
-- Clear documentation for others to deploy
-- SPIDER methodology well documented
+- App accessible via Vercel URL
+- Service Worker MCP works in production
+- All features work as in development
+- Clear user communication about local storage
+- One-command deployment
 
 **Dependencies**: Phase 4 complete
 
-**Commit Message**: `[Spec 0003][Phase: polish] feat: Add demo UI improvements and documentation`
+**Commit Message**: `[Spec 0003][Phase 5: deploy] feat: Deploy to Vercel with demo features`
 
 ## Architectural Decisions
+
+### Service Worker MCP Architecture
+- **Pattern**: Service Worker acts as local MCP server
+- **Innovation**: First known implementation of MCP in Service Worker
+- **Benefits**: Full protocol compliance with local database access
 
 ### Client-Side SQLite Implementation
 - **Library**: sql.js (SQLite compiled to WebAssembly)
 - **Storage**: IndexedDB for persistence
 - **Size**: ~1MB WASM file (acceptable for demo)
+- **Performance**: Runs in Web Worker to avoid blocking
 - **Alternative**: wa-sqlite if sql.js has issues
 
-### Tool Execution Architecture
-- **Pattern**: Client-orchestrated tool execution
-- **Flow**: Server → AI → Tool Request → Client → Execute → Result → Server → AI → Response
-- **Client Tools**: Todo CRUD operations against local SQLite
-- **Server Role**: Stateless proxy to Anthropic API only
+### MCP Protocol Flow
+```
+User Input → Chat UI → /api/chat → Anthropic API
+                ↓
+           Tool Request
+                ↓
+     Service Worker (intercepts /api/mcp/*)
+                ↓
+      Execute on local SQLite (sql.js)
+                ↓
+           Tool Result
+                ↓
+        Continue Conversation
+```
 
 ### Deployment Simplicity
 - **Platform**: Vercel only (no Railway needed)
-- **Database**: None (client-side only)
+- **Database**: None (server-side)
 - **Auth**: None (demo app)
 - **Secrets**: Just ANTHROPIC_API_KEY
+- **Browser Support**: 92% (Service Workers)
 
 ## Risk Mitigation
 
@@ -226,8 +263,8 @@ Instead of server-side MCP tools, the client will:
 
 | Phase | Status | Notes |
 |-------|--------|-------|
-| Phase 1: Client-Side SQLite | `pending` | Ready to start |
-| Phase 2: MCP HTTP Transport | `pending` | Can start in parallel |
-| Phase 3: Simplify API | `pending` | Depends on 1 & 2 |
-| Phase 4: Vercel Deployment | `pending` | Depends on 3 |
-| Phase 5: Polish | `pending` | Depends on 4 |
+| Phase 1: Service Worker Setup | `pending` | Ready to start |
+| Phase 2: Client-Side SQLite | `pending` | Depends on Phase 1 |
+| Phase 3: MCP Protocol Implementation | `pending` | Depends on Phase 2 |
+| Phase 4: Chat API Integration | `pending` | Depends on Phase 3 |
+| Phase 5: Vercel Deployment | `pending` | Depends on Phase 4 |
