@@ -69,30 +69,33 @@ Demonstrate the SPIDER protocol and codev methodology through a working example 
 
 ## Solution Options
 
-### Option 1: Vercel Deployment (Serverless)
-**Approach**: Deploy to Vercel with serverless functions
+### Option 1: Vercel Deployment with Client-Side SQLite
+**Approach**: Deploy to Vercel with SQLite running in the browser
 
 **Pros**:
 - Zero-config deployment for Next.js apps
 - Automatic SSL certificates
 - Global CDN included
-- Automatic scaling
-- Preview deployments for PRs
-- Easy environment variable management
-- Built-in analytics
+- SQLite runs entirely in the browser (via sql.js or wa-sqlite)
+- Zero database costs
+- Instant operations (no network latency)
+- Full SQL capabilities on client-side
+- Can export/import database files
+- Each user has their own database
+- Existing SQLite code mostly works
 
 **Cons**:
-- MCP server as separate process is challenging
-- Serverless function timeouts (10s hobby, 60s pro)
-- SQLite not suitable (ephemeral filesystem)
-- Cold starts affect performance
-- Vendor lock-in to Vercel platform
+- Todos are device-specific (not synced)
+- Clearing browser data loses todos (unless exported)
+- No sharing between users
+- Initial load includes SQLite WASM (~1MB)
 
 **Technical Requirements**:
-- PostgreSQL database (Vercel Postgres or external)
-- Rewrite MCP integration for serverless
-- Implement connection pooling
-- Handle function timeouts gracefully
+- sql.js or wa-sqlite for browser SQLite
+- IndexedDB for persistent storage
+- Existing Drizzle ORM might work with adapter
+- API routes only for AI chat
+- Environment variables for Anthropic API key only
 
 ### Option 2: Railway Deployment (Container-based)
 **Approach**: Deploy to Railway with persistent storage
@@ -158,11 +161,12 @@ Demonstrate the SPIDER protocol and codev methodology through a working example 
 
 ## Implementation Considerations
 
-### Database Migration
-- From SQLite to PostgreSQL
-- Drizzle ORM already supports both
-- Need to update connection strings
-- Test migrations thoroughly
+### Storage Approach
+- Keep SQLite, but run it in the browser!
+- Use sql.js (SQLite compiled to WebAssembly)
+- Store database in IndexedDB for persistence
+- No server database needed
+- Minimal code changes required
 
 ### MCP Server Adaptation
 - **Option A**: Inline MCP tools directly in API routes (no separate server)
@@ -172,9 +176,7 @@ Demonstrate the SPIDER protocol and codev methodology through a working example 
 ### Environment Variables Required
 ```
 ANTHROPIC_API_KEY=xxx
-DATABASE_URL=xxx
-NEXTAUTH_URL=xxx (if adding auth)
-NEXT_PUBLIC_APP_URL=xxx
+NEXT_PUBLIC_APP_URL=xxx (optional)
 ```
 
 ### Monitoring and Observability
@@ -273,14 +275,16 @@ The maix project (github.com/ansari-project/maix) successfully deploys MCP on Ve
 - Focus on functionality over security hardening
 - Can add basic auth later if needed for cost control
 
-#### 3. Database & Connection Management
+#### 3. Client-Side SQLite Benefits
 
-**Critical Requirements Identified:**
-- Use serverless-optimized drivers (@neondatabase/serverless)
-- Avoid node-postgres pooling in serverless
-- Co-locate DB and function regions
-- Implement migration pipeline via CI/CD
-- Enable Point-in-Time Recovery
+**Browser SQLite Advantages:**
+- No database connection management
+- No serverless connection pooling issues
+- No region co-location concerns
+- Existing SQLite queries work
+- Full SQL capabilities in browser
+- Can export/import databases
+- Familiar development experience
 
 #### 4. Timeout & Cost Management
 
@@ -306,9 +310,10 @@ The maix project (github.com/ansari-project/maix) successfully deploys MCP on Ve
 **Phase 1: Basic Deployment**
 - Convert MCP server from stdio to HTTP transport
 - Use `@modelcontextprotocol/sdk` with `StreamableHTTPClientTransport`
+- Integrate sql.js for client-side SQLite
+- Move database operations to browser
 - Deploy everything to Vercel
-- PostgreSQL on Neon or Vercel Postgres
-- Environment variables for API keys
+- Environment variable for Anthropic API key only
 
 **Phase 2: Polish & Documentation**
 - Add conversation persistence
@@ -328,9 +333,10 @@ The maix project (github.com/ansari-project/maix) successfully deploys MCP on Ve
    - Convert tools to API route functions
    - Use the MAIX pattern as reference
 
-2. **Database Migration**
-   - Simple SQLite to PostgreSQL migration
-   - Use existing Drizzle ORM support
+2. **Client-Side SQLite**
+   - Integrate sql.js or wa-sqlite
+   - Adapt Drizzle ORM to work with browser SQLite
+   - Store database in IndexedDB for persistence
 
 3. **Deployment**
    - Single `vercel` command deployment
