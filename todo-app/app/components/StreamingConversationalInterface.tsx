@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { generateRequestId, type ChatMessage } from '@/lib/chat-types'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { useServiceWorker } from './ServiceWorkerProvider'
 
 interface StreamingConversationalInterfaceProps {
   onSendMessage: (message: string) => void
@@ -43,6 +44,7 @@ export function StreamingConversationalInterface({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const hasLoadedHistory = useRef(false)
+  const { isReady: swReady, status: swStatus } = useServiceWorker()
 
   // Load conversation from localStorage on mount
   useEffect(() => {
@@ -125,7 +127,7 @@ export function StreamingConversationalInterface({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isLoading) return
+    if (!input.trim() || isLoading || !swReady) return
 
     const userMessage = input
     const requestId = generateRequestId()
@@ -198,10 +200,10 @@ export function StreamingConversationalInterface({
                     setStreamingStatus('Executing tools...')
 
                     try {
-                      // Check if Service Worker is controlling
-                      if (!navigator.serviceWorker?.controller) {
-                        console.warn('[Chat] Service Worker not controlling page yet');
-                        // Fall back to server-side MCP endpoint
+                      // Check if Service Worker is ready
+                      if (!swReady || !navigator.serviceWorker?.controller) {
+                        console.error('[Chat] Service Worker not ready:', { swReady, swStatus, hasController: !!navigator.serviceWorker?.controller });
+                        throw new Error('Todo service is still initializing. Please wait a moment and try again.');
                       }
 
                       const toolResults = []
@@ -228,6 +230,16 @@ export function StreamingConversationalInterface({
                             id: Date.now()
                           })
                         })
+
+                        if (!mcpResponse.ok) {
+                          const errorData = await mcpResponse.json().catch(() => ({ error: 'Unknown error' }))
+                          console.error('[Chat] MCP request failed:', errorData)
+
+                          if (mcpResponse.status === 503) {
+                            throw new Error('Todo service is still initializing. Please wait a moment and try again.');
+                          }
+                          throw new Error(errorData?.error?.message || 'Failed to execute todo operation.');
+                        }
 
                         const mcpResult = await mcpResponse.json()
 
@@ -271,9 +283,10 @@ export function StreamingConversationalInterface({
                       setStreamingStatus('')
                     } catch (error) {
                       console.error('Tool execution error:', error)
+                      const errorMessage = error instanceof Error ? error.message : 'Sorry, there was an error executing the requested action.'
                       setMessages(prev => [...prev, {
                         role: 'assistant',
-                        content: 'Sorry, there was an error executing the requested action.'
+                        content: errorMessage
                       }])
                       setIsLoading(false)
                       setStreamingStatus('')
@@ -462,16 +475,27 @@ export function StreamingConversationalInterface({
       </div>
 
       <form onSubmit={handleSubmit} className="p-4 border-t dark:border-gray-700">
+        {!swReady && swStatus !== 'error' && (
+          <div className="text-sm text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-2">
+            <div className="animate-spin h-3 w-3 border-2 border-amber-600 dark:border-amber-400 border-t-transparent rounded-full" />
+            Initializing todo service...
+          </div>
+        )}
+        {swStatus === 'error' && (
+          <div className="text-sm text-red-600 dark:text-red-400 mb-2">
+            Todo service unavailable. Please refresh the page.
+          </div>
+        )}
         <div className="flex gap-2">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Tell me what you want to do..."
+            placeholder={swReady ? "Tell me what you want to do..." : "Waiting for service to initialize..."}
             className="flex-1"
-            disabled={isLoading}
+            disabled={isLoading || !swReady}
           />
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Processing...' : 'Send'}
+          <Button type="submit" disabled={isLoading || !swReady}>
+            {isLoading ? 'Processing...' : !swReady ? 'Initializing...' : 'Send'}
           </Button>
         </div>
         <div className="flex justify-between items-center mt-2">

@@ -7,6 +7,22 @@ import { StreamingConversationalInterface } from '../app/components/StreamingCon
 // Mock scrollIntoView since it's not available in jsdom
 Element.prototype.scrollIntoView = vi.fn()
 
+// Mock fetch for streaming responses
+global.fetch = vi.fn(() =>
+  Promise.resolve({
+    ok: false,
+    status: 500,
+    body: null,
+    headers: new Headers(),
+  } as Response)
+)
+
+// Mock ServiceWorkerProvider context
+vi.mock('../app/components/ServiceWorkerProvider', () => ({
+  useServiceWorker: () => ({ isReady: true, status: 'ready', error: null }),
+  ServiceWorkerProvider: ({ children }: any) => children
+}))
+
 // Mock the UI components
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, ...props }: any) => (

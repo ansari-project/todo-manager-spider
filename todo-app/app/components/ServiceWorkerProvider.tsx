@@ -1,6 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, createContext, useContext } from 'react';
+
+interface ServiceWorkerContextType {
+  isReady: boolean;
+  status: 'unsupported' | 'registering' | 'ready' | 'error';
+  error: string | null;
+}
+
+const ServiceWorkerContext = createContext<ServiceWorkerContextType>({
+  isReady: false,
+  status: 'registering',
+  error: null
+});
+
+export function useServiceWorker() {
+  return useContext(ServiceWorkerContext);
+}
 
 export function ServiceWorkerProvider({ children }: { children: React.ReactNode }) {
   const [swStatus, setSwStatus] = useState<'unsupported' | 'registering' | 'ready' | 'error'>('registering');
@@ -83,5 +99,13 @@ export function ServiceWorkerProvider({ children }: { children: React.ReactNode 
     }
   }
 
-  return <>{children}</>;
+  return (
+    <ServiceWorkerContext.Provider value={{
+      isReady: swStatus === 'ready',
+      status: swStatus,
+      error: swError
+    }}>
+      {children}
+    </ServiceWorkerContext.Provider>
+  );
 }

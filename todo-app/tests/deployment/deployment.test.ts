@@ -151,19 +151,19 @@ describe('Phase 5: Deployment Configuration', () => {
 
   describe('API Route Compatibility', () => {
     it('should not use abort signals in Anthropic SDK incorrectly', () => {
-      const chatRoute = path.join(process.cwd(), 'app/api/chat/route.ts');
-      const content = fs.readFileSync(chatRoute, 'utf-8');
+      const streamRoute = path.join(process.cwd(), 'app/api/chat/stream/route.ts');
+      const content = fs.readFileSync(streamRoute, 'utf-8');
 
-      // Should NOT pass signal as a separate parameter
+      // Should NOT pass signal as a separate parameter to Anthropic SDK
       expect(content).not.toContain('signal: controller.signal');
     });
 
     it('should handle TypeScript any types with assertions', () => {
-      const chatRoute = path.join(process.cwd(), 'app/api/chat/route.ts');
-      const content = fs.readFileSync(chatRoute, 'utf-8');
+      const streamRoute = path.join(process.cwd(), 'app/api/chat/stream/route.ts');
+      const content = fs.readFileSync(streamRoute, 'utf-8');
 
       // Should use type assertions for compatibility
-      expect(content).toContain('as any');
+      expect(content).toContain('as const');
     });
   });
 

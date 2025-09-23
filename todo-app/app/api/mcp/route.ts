@@ -1,50 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Fallback MCP handler for when Service Worker isn't active
-// The Service Worker should intercept these requests, but this handles edge cases
+// This endpoint should NEVER be reached - the Service Worker should intercept all /api/mcp/ requests
+// If this is called, it means the Service Worker is not controlling the page
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    console.log('[MCP Fallback] Request received:', body.method)
+  console.error('[MCP Fallback] ERROR: Request reached server - Service Worker not intercepting!')
 
-    // If this is a tools/call request, return a retry message
-    if (body.method === 'tools/call') {
-      const toolName = body.params?.name || 'unknown'
-
-      // Return a proper tool result that indicates retry is needed
-      return NextResponse.json({
-        jsonrpc: '2.0',
-        id: body.id || null,
-        result: {
-          content: [{
-            type: 'text',
-            text: 'The todo service is still initializing. Please refresh the page and try again.'
-          }],
-          success: false,
-          retry: true
-        }
-      })
-    }
-
-    // For other requests, return a basic response
-    return NextResponse.json({
+  // Return 503 to indicate service unavailable
+  return NextResponse.json(
+    {
       jsonrpc: '2.0',
-      id: body.id || null,
-      result: {
-        error: 'Service Worker MCP is initializing. Please try again.',
-        info: 'The Service Worker should handle these requests locally once ready'
-      }
-    })
-  } catch (error) {
-    return NextResponse.json({
-      jsonrpc: '2.0',
-      id: null,
       error: {
-        code: -32700,
-        message: 'Parse error'
+        code: -32603,
+        message: 'Service Worker not active. This application requires the Service Worker to be controlling the page for todo operations. Please refresh the page.',
+        data: {
+          info: 'The Service Worker MCP handles all todo operations locally using IndexedDB',
+          action: 'Please refresh the page to activate the Service Worker'
+        }
       }
-    })
-  }
+    },
+    { status: 503 }
+  )
 }
 
 export async function GET(request: NextRequest) {
