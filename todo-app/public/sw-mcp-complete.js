@@ -3,7 +3,7 @@
  * This combines the MCP handlers with SQLite database
  */
 
-// Import sql.js for SQLite
+// Import sql.js for SQLite (this is the pre-built version for browsers)
 importScripts('/sql-wasm.js');
 
 // Import MCP handlers

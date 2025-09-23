@@ -222,7 +222,21 @@ Execute for each phase in the plan. This is a strict cycle that must be complete
 
 **CRITICAL PRECONDITION**: Before starting any phase, verify the previous phase was committed to git. No phase can begin without the prior phase's commit.
 
-**⚠️ MANDATORY**: The I-D-E cycle MUST be completed for EACH PHASE, not just at the end of all phases. Skipping D (Defend) or E (Evaluate) for any phase is a PROTOCOL VIOLATION.
+**⚠️ MANDATORY ENFORCEMENT - PROTOCOL VIOLATION = IMMEDIATE STOP**:
+- The I-D-E cycle MUST be completed IN FULL for EACH PHASE
+- Skipping D (Defend) or E (Evaluate) for ANY phase is a PROTOCOL VIOLATION
+- If you realize you skipped D or E, you MUST:
+  1. STOP immediately
+  2. Go back and complete the missing step(s)
+  3. Get multi-agent review
+  4. Only then continue
+
+**Phase Completion Checklist (ALL REQUIRED)**:
+- [ ] **Implement** - Code written and working
+- [ ] **Defend** - Tests written and passing
+- [ ] **Evaluate** - Multi-agent review (GPT-5 + Gemini Pro) completed
+- [ ] **Commit** - Single atomic commit created
+- [ ] **TodoWrite** - Phase marked as completed in todo list
 
 **Phase Completion Process**:
 1. **Implement** - Build the code for this phase

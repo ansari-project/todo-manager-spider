@@ -24,11 +24,17 @@ codev/
 3. **Implement-Defend-Evaluate (PER PHASE)**:
    - **Implement**: Build code for this phase
    - **Defend**: Write tests IMMEDIATELY (not retroactively)
-   - **Evaluate**: Get multi-agent review
+   - **Evaluate**: Get multi-agent review (GPT-5 + Gemini Pro minimum)
    - **Commit**: Single atomic commit before next phase
 4. **Review**: Document lessons in `codev/lessons/`
 
-**⚠️ CRITICAL**: I-D-E must be done for EACH PHASE, not at the end of all phases!
+**⚠️ CRITICAL ENFORCEMENT RULES - VIOLATION = IMMEDIATE FAILURE**:
+- **MANDATORY**: Complete ALL THREE (I-D-E) steps for EACH phase
+- **FORBIDDEN**: Moving to next phase without completing current phase's D and E
+- **REQUIRED**: Tests must be written and passing before Evaluate step
+- **REQUIRED**: Multi-agent review from at least 2 models (GPT-5 + Gemini Pro)
+- **TRACKING**: Use TodoWrite - phase is NOT complete until I-D-E are ALL done
+- **RECOVERY**: If D or E were skipped, MUST go back and complete them immediately
 
 ## Project Overview
 This is a Todo Manager application built using the SPIDER protocol methodology with both traditional UI and LLM-powered conversational interface.
