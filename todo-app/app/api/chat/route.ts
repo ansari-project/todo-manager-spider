@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
       console.log(`[${run_id}] Iteration ${iterations}`)
 
       const response = await anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 1024,
         temperature: 0,
         system: SYSTEM_PROMPT,
@@ -292,7 +292,7 @@ export async function POST(request: NextRequest) {
       console.log(`[${run_id}] Getting final response after ${iterations} iterations`)
 
       const concludeResponse = await anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 512,
         temperature: 0,
         system: SYSTEM_PROMPT,
