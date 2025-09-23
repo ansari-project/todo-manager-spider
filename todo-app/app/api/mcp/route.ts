@@ -3,13 +3,29 @@ import { NextRequest, NextResponse } from 'next/server'
 // Fallback MCP handler for when Service Worker isn't active
 // The Service Worker should intercept these requests, but this handles edge cases
 export async function POST(request: NextRequest) {
-  return NextResponse.json(
-    {
-      error: 'Service Worker not active. Please refresh the page to enable local MCP tools.',
-      info: 'The Service Worker MCP should handle these requests locally'
-    },
-    { status: 503 }
-  )
+  try {
+    const body = await request.json()
+    console.log('[MCP Fallback] Request received:', body.method)
+
+    // Return a basic JSON-RPC response
+    return NextResponse.json({
+      jsonrpc: '2.0',
+      id: body.id || null,
+      result: {
+        error: 'Service Worker MCP is initializing. Please try again.',
+        info: 'The Service Worker should handle these requests locally once ready'
+      }
+    })
+  } catch (error) {
+    return NextResponse.json({
+      jsonrpc: '2.0',
+      id: null,
+      error: {
+        code: -32700,
+        message: 'Parse error'
+      }
+    })
+  }
 }
 
 export async function GET(request: NextRequest) {
