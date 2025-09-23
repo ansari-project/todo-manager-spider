@@ -5,7 +5,7 @@
  * using WebAssembly. Data is persisted to IndexedDB for durability.
  */
 
-import initSqlJs, { SqlJsStatic, Database } from 'sql.js';
+import type { SqlJsStatic, Database } from 'sql.js';
 
 // Database instance singleton
 let sqliteDb: Database | null = null;
@@ -25,8 +25,9 @@ export async function initializeDatabase(): Promise<Database> {
 
   console.log('[SQLite] Initializing sql.js...');
 
-  // Initialize sql.js with WASM
+  // Initialize sql.js with WASM (dynamic import to avoid SSR issues)
   if (!SQL) {
+    const initSqlJs = (await import('sql.js')).default;
     SQL = await initSqlJs({
       locateFile: file => `/sql-wasm.wasm`
     });
@@ -263,6 +264,7 @@ export async function importDatabase(file: File): Promise<void> {
   const buffer = await file.arrayBuffer();
 
   if (!SQL) {
+    const initSqlJs = (await import('sql.js')).default;
     SQL = await initSqlJs({
       locateFile: file => `/sql-wasm.wasm`
     });
