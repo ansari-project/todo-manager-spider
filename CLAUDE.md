@@ -19,57 +19,33 @@ codev/
 ```
 
 ### Workflow
-1. **Specify**: Create detailed specification in `codev/specs/`
-2. **Plan**: Develop implementation plan in `codev/plans/`
-3. **Implement-Defend-Evaluate (PER PHASE)**:
-   - **Implement**: Build code for this phase
-   - **Defend**: Write tests IMMEDIATELY (not retroactively)
-   - **Evaluate**: Get multi-agent review (GPT-5 + Gemini Pro minimum)
-   - **Commit**: Single atomic commit before next phase
-4. **Review**: Document lessons in `codev/lessons/`
+This project uses the **SPIDER protocol** for all development:
+- **S**pecify: Create specification in `codev/specs/`
+- **P**lan: Create implementation plan in `codev/plans/`
+- **I-D-E**: Implement-Defend-Evaluate cycle (per phase)
+- **R**eview: Document lessons in `codev/lessons/`
 
-## ⛔ MANDATORY PHASE GATE PROTOCOL
+**📖 SPIDER Protocol**:
+- Quick Reference: `codev/protocols/spider/QUICK-REFERENCE.md`
+- Full Details: `codev/protocols/spider/protocol.md`
 
-### BEFORE Starting ANY Phase:
-1. **Verify Previous Phase**: Run `git log --oneline -5` to confirm previous phase commit exists
-2. **Create Phase Todos** (MANDATORY - use TodoWrite with these EXACT 4 items):
-   - "Phase N: Implement [feature]" → mark as "in_progress"
-   - "Phase N: Write tests for [feature]" → mark as "pending"
-   - "Phase N: Get multi-agent review" → mark as "pending"
-   - "Phase N: Commit [feature]" → mark as "pending"
-3. **State Intent**: Say "Starting Phase N Implementation" explicitly
+### ⚠️ CRITICAL SPIDER REMINDERS FOR THIS PROJECT
+1. **Phase Gates are MANDATORY** - Check protocol.md for Entry/Exit checklists
+2. **TodoWrite is REQUIRED** - Create 4 tasks per phase (Implement, Test, Review, Commit)
+3. **Tests IMMEDIATELY** - Never skip to next phase without tests
+4. **Multi-agent review REQUIRED** - Minimum 2 models per phase
+5. **Single commit per phase** - Atomic commits only
 
-### 🚫 AUTOMATIC STOP CONDITIONS:
-STOP IMMEDIATELY if:
-- Any "Write tests" task is still pending after implementation
-- Any "Get multi-agent review" task is pending after tests
-- Previous phase lacks a git commit
-- You think "I'll write tests later" or "I'll get review later"
-
-### ✅ PHASE COMPLETION CHECKLIST:
-Before ANY phase transition, verify ALL:
-- [ ] Implementation working (show output)
-- [ ] Tests passing (paste `npm test` output)
-- [ ] Review complete (show model feedback)
-- [ ] Commit created (show `git log -1`)
-- [ ] All 4 todos marked "completed"
-
-### 🧠 COGNITIVE BREAK RULE:
-After implementing, you MUST:
-1. State: "Implementation done, switching to test mode"
-2. Check TodoWrite for pending test task
-3. State: "Writing tests for Phase N now"
+**If you skip Defend or Evaluate**: STOP and see "Violation Recovery Protocol" in protocol.md
 
 ## Project Overview
 This is a Todo Manager application built using the SPIDER protocol methodology with both traditional UI and LLM-powered conversational interface.
 
 ## Development Guidelines
-- Follow the SPIDER protocol for all new features
-- Maintain specification-plan-lessons document triad (1:1:1 correspondence)
-- Use multi-agent consultation at checkpoints
-- Document all architectural decisions
-- **NEVER skip the Defend phase** - write tests immediately after implementation
-- **Complete I-D-E for EACH phase** before moving to the next phase
+- Follow the SPIDER protocol for ALL features (see `codev/protocols/spider/protocol.md`)
+- Maintain 1:1:1 correspondence: spec → plan → lessons (same filenames)
+- Use Zen MCP multi-agent consultation (enabled by default)
+- Document architectural decisions in appropriate codev/ subdirectory
 
 ## Lessons Learned
 
