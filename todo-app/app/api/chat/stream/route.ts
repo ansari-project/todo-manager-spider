@@ -114,12 +114,15 @@ CRITICAL RULES:
 2. When listing todos, include the EXACT titles and IDs from tool results
 3. When confirming actions, cite the SPECIFIC changes from tool results
 4. Be concise and helpful in your responses
+5. When updating multiple todos, ALWAYS call todo_list first to get the current IDs
+6. NEVER make up or guess todo IDs - use the exact IDs from the todos array returned by todo_list
+7. The todo_list tool returns a 'todos' array with full todo objects including their 'id' field
 
 Available tools:
-- todo_list: List and filter todos
+- todo_list: List and filter todos (returns 'todos' array with id, title, status, etc.)
 - todo_create: Create new todos
-- todo_update: Update existing todos
-- todo_delete: Delete todos`
+- todo_update: Update existing todos (requires exact 'id' from todo_list)
+- todo_delete: Delete todos (requires exact 'id' from todo_list)`
 
 // Note: Tool execution happens on the client side via Service Worker
 // The server just returns tool requests for the client to execute

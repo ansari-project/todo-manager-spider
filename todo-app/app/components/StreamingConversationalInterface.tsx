@@ -266,13 +266,78 @@ export function StreamingConversationalInterface({
 
                       const continueResult = await continueResponse.json()
 
-                      // Add final response
-                      const assistantMsg: ChatMessage = {
-                        role: 'assistant',
-                        content: continueResult.response
+                      // Check if Claude needs more tools
+                      if (continueResult.needsMoreTools) {
+                        // Execute additional tools
+                        const moreToolResults = []
+
+                        for (const tool of continueResult.toolRequests || []) {
+                          setStreamingStatus(`Executing ${tool.name}...`)
+
+                          const mcpResponse = await fetch(mcpUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              jsonrpc: '2.0',
+                              method: 'tools/call',
+                              params: {
+                                name: tool.name,
+                                arguments: tool.input
+                              },
+                              id: Date.now()
+                            })
+                          })
+
+                          if (!mcpResponse.ok) {
+                            const errorData = await mcpResponse.json().catch(() => ({ error: 'Unknown error' }))
+                            throw new Error(errorData?.error?.message || 'Failed to execute todo operation.');
+                          }
+
+                          const mcpResult = await mcpResponse.json()
+                          moreToolResults.push({
+                            tool_use_id: tool.id,
+                            content: mcpResult.result || mcpResult.error || 'Tool execution failed'
+                          })
+                        }
+
+                        // Continue again with new tool results
+                        const finalResponse = await fetch('/api/chat/continue', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            messages: [...conversationHistory, userMsg, {
+                              role: 'assistant',
+                              content: continueResult.assistantContent
+                            }, {
+                              role: 'user',
+                              content: moreToolResults.map((r: any) => ({
+                                type: 'tool_result',
+                                tool_use_id: r.tool_use_id,
+                                content: r.content
+                              }))
+                            }],
+                            toolResults: [...toolResults, ...moreToolResults]
+                          })
+                        })
+
+                        const finalResult = await finalResponse.json()
+
+                        // Add final response
+                        const assistantMsg: ChatMessage = {
+                          role: 'assistant',
+                          content: finalResult.response
+                        }
+                        setMessages(prev => [...prev, assistantMsg])
+                        setConversationHistory(prev => [...prev, userMsg, assistantMsg])
+                      } else {
+                        // Add final response
+                        const assistantMsg: ChatMessage = {
+                          role: 'assistant',
+                          content: continueResult.response
+                        }
+                        setMessages(prev => [...prev, assistantMsg])
+                        setConversationHistory(prev => [...prev, userMsg, assistantMsg])
                       }
-                      setMessages(prev => [...prev, assistantMsg])
-                      setConversationHistory(prev => [...prev, userMsg, assistantMsg])
 
                       // Notify parent to refresh todos
                       if (onTodosChanged) {
