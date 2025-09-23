@@ -31,13 +31,13 @@ describe('Phase 1: SQL Dependency Removal', () => {
     expect(packageJson.devDependencies['@types/better-sqlite3']).toBeUndefined()
   })
 
-  it('should still have sql.js for potential future use', () => {
+  it('should not have sql.js dependency', () => {
     const packageJson = JSON.parse(
       readFileSync(join(process.cwd(), 'package.json'), 'utf-8')
     )
 
-    // sql.js is kept as it might be used by service worker
-    expect(packageJson.dependencies['sql.js']).toBeDefined()
+    // sql.js has been removed completely
+    expect(packageJson.dependencies['sql.js']).toBeUndefined()
   })
 
   it('should not have database scripts in package.json', () => {
