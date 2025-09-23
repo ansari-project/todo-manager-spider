@@ -8,21 +8,19 @@ import { ThemeToggle } from './components/ThemeToggle'
 import { MCPTestButton } from './components/MCPTestButton'
 import { SQLiteTestButton } from './components/SQLiteTestButton'
 import { MCPDemo } from './components/MCPDemo'
-import { Todo } from '@/db/schema'
+import { todos as todoStorage } from './lib/storage-client'
+import { Todo } from '@/db/types'
 import { CreateTodoInput } from './lib/validators'
 
 export default function Home() {
   const [todos, setTodos] = useState<Todo[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Fetch todos
+  // Fetch todos from IndexedDB
   const fetchTodos = async () => {
     try {
-      const response = await fetch('/api/todos')
-      if (response.ok) {
-        const data = await response.json()
-        setTodos(data)
-      }
+      const data = await todoStorage.findAll()
+      setTodos(data)
     } catch (error) {
       console.error('Error fetching todos:', error)
     } finally {
@@ -37,16 +35,14 @@ export default function Home() {
   // Add todo
   const handleAddTodo = async (todo: CreateTodoInput) => {
     try {
-      const response = await fetch('/api/todos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(todo),
+      const newTodo = await todoStorage.create({
+        title: todo.title,
+        description: todo.description,
+        priority: todo.priority,
+        status: todo.status,
+        dueDate: todo.dueDate ? new Date(todo.dueDate) : null
       })
-
-      if (response.ok) {
-        const newTodo = await response.json()
-        setTodos(prev => [newTodo, ...prev])
-      }
+      setTodos(prev => [newTodo, ...prev])
     } catch (error) {
       console.error('Error adding todo:', error)
     }
@@ -62,13 +58,8 @@ export default function Home() {
     )
 
     try {
-      const response = await fetch(`/api/todos/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      })
-
-      if (!response.ok) {
+      const updated = await todoStorage.update(id, updates)
+      if (!updated) {
         // Revert on error
         fetchTodos()
       }
@@ -84,11 +75,8 @@ export default function Home() {
     setTodos(prev => prev.filter(todo => todo.id !== id))
 
     try {
-      const response = await fetch(`/api/todos/${id}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
+      const deleted = await todoStorage.delete(id)
+      if (!deleted) {
         // Revert on error
         fetchTodos()
       }
