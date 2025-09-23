@@ -303,20 +303,20 @@ The maix project (github.com/ansari-project/maix) successfully deploys MCP on Ve
 
 ### Architecture: Vercel-Only with HTTP-based MCP
 
-**Phase 1: Basic Deployment (1 day)**
+**Phase 1: Basic Deployment**
 - Convert MCP server from stdio to HTTP transport
 - Use `@modelcontextprotocol/sdk` with `StreamableHTTPClientTransport`
 - Deploy everything to Vercel
 - PostgreSQL on Neon or Vercel Postgres
 - Environment variables for API keys
 
-**Phase 2: Polish & Documentation (1 day)**
+**Phase 2: Polish & Documentation**
 - Add conversation persistence
 - Improve error handling
 - Create deployment guide
 - Document SPIDER protocol usage
 
-**Phase 3: Optional Enhancements (if needed)**
+**Phase 3: Optional Enhancements**
 - Basic auth if cost control needed
 - Simple usage tracking
 - Performance optimization
