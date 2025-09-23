@@ -13,14 +13,13 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
-    let query = db.select().from(todos)
     const conditions = []
 
     if (status) {
-      conditions.push(eq(todos.status, status))
+      conditions.push(eq(todos.status, status as any))
     }
     if (priority) {
-      conditions.push(eq(todos.priority, priority))
+      conditions.push(eq(todos.priority, priority as any))
     }
     if (startDate) {
       conditions.push(gte(todos.dueDate, new Date(startDate)))
@@ -29,9 +28,9 @@ export async function GET(request: NextRequest) {
       conditions.push(lte(todos.dueDate, new Date(endDate)))
     }
 
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions))
-    }
+    const query = conditions.length > 0
+      ? db.select().from(todos).where(and(...conditions))
+      : db.select().from(todos)
 
     const result = await query.orderBy(desc(todos.createdAt))
 

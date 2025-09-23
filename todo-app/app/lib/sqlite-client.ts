@@ -28,9 +28,10 @@ export async function initializeDatabase(): Promise<Database> {
   // Initialize sql.js with WASM (dynamic import to avoid SSR issues)
   if (!SQL) {
     const initSqlJs = (await import('sql.js')).default;
-    SQL = await initSqlJs({
+    const sqlModule = await initSqlJs({
       locateFile: file => `/sql-wasm.wasm`
     });
+    SQL = sqlModule.Database;
   }
 
   // Try to load existing database from IndexedDB
@@ -38,10 +39,10 @@ export async function initializeDatabase(): Promise<Database> {
 
   if (dbData) {
     console.log('[SQLite] Loading existing database from IndexedDB');
-    sqliteDb = new SQL.Database(new Uint8Array(dbData));
+    sqliteDb = new SQL(new Uint8Array(dbData));
   } else {
     console.log('[SQLite] Creating new database');
-    sqliteDb = new SQL.Database();
+    sqliteDb = new SQL();
 
     // Create initial schema
     await createSchema(sqliteDb);
@@ -254,7 +255,7 @@ function setupAutoSave() {
 export async function exportDatabase(): Promise<Blob> {
   const db = await getDatabase();
   const data = db.export();
-  return new Blob([data], { type: 'application/x-sqlite3' });
+  return new Blob([data as any], { type: 'application/x-sqlite3' });
 }
 
 /**
@@ -265,9 +266,10 @@ export async function importDatabase(file: File): Promise<void> {
 
   if (!SQL) {
     const initSqlJs = (await import('sql.js')).default;
-    SQL = await initSqlJs({
+    const sqlModule = await initSqlJs({
       locateFile: file => `/sql-wasm.wasm`
     });
+    SQL = sqlModule.Database;
   }
 
   // Close existing database
@@ -276,7 +278,7 @@ export async function importDatabase(file: File): Promise<void> {
   }
 
   // Load new database
-  sqliteDb = new SQL.Database(new Uint8Array(buffer));
+  sqliteDb = new SQL(new Uint8Array(buffer));
 
   // Save to IndexedDB
   await saveDatabase();

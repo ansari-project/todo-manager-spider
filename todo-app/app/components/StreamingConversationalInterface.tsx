@@ -205,7 +205,7 @@ export function StreamingConversationalInterface({
 
                     // Update conversation history
                     if (event.historyDelta && event.historyDelta.length > 0) {
-                      setConversationHistory(prev => [...prev, userMsg, ...event.historyDelta])
+                      setConversationHistory(prev => [...prev, userMsg, ...(event.historyDelta as any)])
                     } else {
                       setConversationHistory(prev => [...prev, userMsg, assistantMsg])
                     }

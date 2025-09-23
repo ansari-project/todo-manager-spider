@@ -219,13 +219,11 @@ export async function POST(request: NextRequest) {
             system: SYSTEM_PROMPT,
             messages: claudeMessages,
             tools: claudeTools as any,
-          }, {
-            signal: controller.signal as any,
           })
 
           // Add assistant response to history
           claudeMessages.push({ role: 'assistant', content: response.content })
-          historyDelta.push({ role: 'assistant', content: response.content })
+          historyDelta.push({ role: 'assistant', content: response.content as any })
 
           // Check for tool use
           const toolUses = response.content.filter((c: any) => c.type === 'tool_use')
@@ -303,7 +301,7 @@ export async function POST(request: NextRequest) {
           })
           historyDelta.push({
             role: 'user',
-            content: toolResults
+            content: toolResults as any
           })
         }
 
@@ -322,8 +320,7 @@ export async function POST(request: NextRequest) {
             temperature: 0,
             system: SYSTEM_PROMPT,
             messages: claudeMessages,
-            tools: claudeTools as any,
-            signal: controller.signal as any,
+            tools: claudeTools as any
           })
 
           const textContent = concludeResponse.content.find((c: any) => c.type === 'text') as any

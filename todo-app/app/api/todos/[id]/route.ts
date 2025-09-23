@@ -7,13 +7,14 @@ import { eq } from 'drizzle-orm'
 // GET /api/todos/[id] - Get single todo
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const result = await db
       .select()
       .from(todos)
-      .where(eq(todos.id, params.id))
+      .where(eq(todos.id, id))
       .limit(1)
 
     if (result.length === 0) {
@@ -36,8 +37,9 @@ export async function GET(
 // PUT /api/todos/[id] - Update todo
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const body = await request.json()
     const validated = updateTodoSchema.parse(body)
@@ -50,14 +52,14 @@ export async function PUT(
     // Set completedAt when status changes to completed
     if (validated.status === 'completed') {
       updates.completedAt = new Date()
-    } else if (validated.status && validated.status !== 'completed') {
+    } else if (validated.status) {
       updates.completedAt = null
     }
 
     const result = await db
       .update(todos)
       .set(updates)
-      .where(eq(todos.id, params.id))
+      .where(eq(todos.id, id))
       .returning()
 
     if (result.length === 0) {
@@ -87,12 +89,13 @@ export async function PUT(
 // DELETE /api/todos/[id] - Delete todo
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const result = await db
       .delete(todos)
-      .where(eq(todos.id, params.id))
+      .where(eq(todos.id, id))
       .returning()
 
     if (result.length === 0) {
