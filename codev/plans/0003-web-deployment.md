@@ -32,10 +32,12 @@ Deploy the Todo Manager demonstration app to Vercel with client-side SQLite, sho
 **Objective**: Replace server SQLite with browser-based SQLite
 
 **Deliverables**:
-- Integrate sql.js library
-- Create browser SQLite adapter
+- Integrate sql.js library with Web Worker
+- Create browser SQLite adapter with auto-save
+- Add IndexedDB detection and fallback
 - Migrate todo operations to client-side
-- Store database in IndexedDB
+- Store database in IndexedDB with debounce
+- Add schema versioning for future updates
 - Test all CRUD operations work locally
 - Remove server-side database code
 
@@ -49,22 +51,22 @@ Deploy the Todo Manager demonstration app to Vercel with client-side SQLite, sho
 
 **Commit Message**: `[Spec 0003][Phase: client-sqlite] feat: Implement client-side SQLite with sql.js`
 
-### Phase 2: MCP HTTP Transport Conversion
-**Objective**: Convert MCP from stdio to HTTP transport (following MAIX pattern)
+### Phase 2: Client-Side Tool Orchestration
+**Objective**: Enable AI to trigger client-side todo operations
 
 **Deliverables**:
-- Install @modelcontextprotocol/sdk
-- Create /api/mcp route handler
-- Convert MCP tools to HTTP handlers
+- Create client-side tool execution system
+- Modify chat API to return tool requests to client
+- Implement client-side tool handlers for todo operations
+- Client sends tool results back to continue conversation
 - Remove stdio-based MCP server
-- Update chat API to use new MCP client
 - Test all conversational commands work
 
 **Success Criteria**:
-- All MCP tools accessible via HTTP
-- No stdio processes required
-- Chat can execute todo operations
-- Error handling works properly
+- AI can request todo operations
+- Client executes tools against local SQLite
+- Tool results flow back to complete AI response
+- No server-side database access needed
 
 **Dependencies**: None - independent of Phase 1
 
@@ -139,11 +141,11 @@ Deploy the Todo Manager demonstration app to Vercel with client-side SQLite, sho
 - **Size**: ~1MB WASM file (acceptable for demo)
 - **Alternative**: wa-sqlite if sql.js has issues
 
-### MCP HTTP Transport
-- **Pattern**: Follow MAIX implementation
-- **Library**: @modelcontextprotocol/sdk
-- **Transport**: StreamableHTTPClientTransport
-- **Tools**: Define as async functions in route handler
+### Tool Execution Architecture
+- **Pattern**: Client-orchestrated tool execution
+- **Flow**: Server → AI → Tool Request → Client → Execute → Result → Server → AI → Response
+- **Client Tools**: Todo CRUD operations against local SQLite
+- **Server Role**: Stateless proxy to Anthropic API only
 
 ### Deployment Simplicity
 - **Platform**: Vercel only (no Railway needed)
@@ -156,22 +158,27 @@ Deploy the Todo Manager demonstration app to Vercel with client-side SQLite, sho
 | Risk | Mitigation |
 |------|------------|
 | sql.js compatibility issues | Fallback to wa-sqlite or even localStorage |
-| Large WASM file size | Lazy load only when needed |
+| Large WASM file size | Lazy load only when needed, use Web Worker |
 | Browser storage limits | Add warning when approaching limits |
-| MCP HTTP conversion complex | Use MAIX code as reference |
+| Server tools can't access client DB | Client-orchestrated tool execution |
 | Lost data on clear cache | Add export/import functionality |
+| UI blocking from DB operations | Run sql.js in Web Worker |
+| IndexedDB unavailable (private mode) | Detect and fallback to memory-only mode |
 
 ## Testing Strategy
 
 ### Phase 1 Tests:
 - Client-side SQLite CRUD operations
-- IndexedDB persistence
+- IndexedDB persistence with auto-save
 - Export/import functionality
+- Web Worker performance
+- Private browsing mode detection
 
 ### Phase 2 Tests:
-- MCP HTTP endpoint responses
-- Tool execution via HTTP
+- Client-side tool execution
+- Tool request/response flow
 - Error handling
+- State synchronization
 
 ### Phase 3 Tests:
 - Ensure no broken dependencies
@@ -200,6 +207,20 @@ Deploy the Todo Manager demonstration app to Vercel with client-side SQLite, sho
 - No sync between devices (feature, not bug for demo)
 - Focus on showcasing SPIDER methodology
 - Simplicity over scalability
+
+## Expert Review Consensus
+
+**GPT-5 (Score: 8/10)** and **Gemini Pro (Score: 9/10)** both identified the critical architectural issue:
+- Server-side MCP tools cannot access client-side SQLite database
+- Solution: Client-orchestrated tool execution
+- Additional recommendations: Web Worker for sql.js, IndexedDB fallback handling
+
+**Key Architecture Change**:
+Instead of server-side MCP tools, the client will:
+1. Receive tool requests from the AI via the chat API
+2. Execute tools locally against its SQLite database
+3. Send results back to continue the conversation
+4. This maintains the client-only database architecture
 
 ## Status Tracking
 
