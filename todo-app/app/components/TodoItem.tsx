@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Todo } from '@/db/schema'
+import { Todo } from '@/db/types'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -28,7 +28,7 @@ export function TodoItem({ todo, onUpdate, onDelete }: TodoItemProps) {
     setIsEditing(false)
   }
 
-  const priorityColors = {
+  const priorityColors: Record<string, string> = {
     low: 'bg-blue-100 text-blue-800',
     medium: 'bg-yellow-100 text-yellow-800',
     high: 'bg-red-100 text-red-800',
@@ -68,7 +68,7 @@ export function TodoItem({ todo, onUpdate, onDelete }: TodoItemProps) {
         )}
 
         <div className="flex gap-2 mt-2">
-          <Badge className={priorityColors[todo.priority]}>
+          <Badge className={priorityColors[todo.priority] || priorityColors.medium}>
             {todo.priority}
           </Badge>
 
