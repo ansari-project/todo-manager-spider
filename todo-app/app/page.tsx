@@ -6,6 +6,7 @@ import { TodoList } from './components/TodoList'
 import { StreamingConversationalInterface } from './components/StreamingConversationalInterface'
 import { ThemeToggle } from './components/ThemeToggle'
 import { MCPTestButton } from './components/MCPTestButton'
+import { SQLiteTestButton } from './components/SQLiteTestButton'
 import { Todo } from '@/db/schema'
 import { CreateTodoInput } from './lib/validators'
 
@@ -140,8 +141,13 @@ export default function Home() {
         </div>
       </div>
 
-      {/* MCP Test Button (for demo/development) */}
-      {process.env.NODE_ENV === 'development' && <MCPTestButton />}
+      {/* Test Buttons (for demo/development) */}
+      {process.env.NODE_ENV === 'development' && (
+        <>
+          <MCPTestButton />
+          <SQLiteTestButton />
+        </>
+      )}
     </div>
   )
 }
