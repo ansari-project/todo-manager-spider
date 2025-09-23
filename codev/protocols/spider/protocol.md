@@ -223,20 +223,60 @@ Execute for each phase in the plan. This is a strict cycle that must be complete
 **CRITICAL PRECONDITION**: Before starting any phase, verify the previous phase was committed to git. No phase can begin without the prior phase's commit.
 
 **⚠️ MANDATORY ENFORCEMENT - PROTOCOL VIOLATION = IMMEDIATE STOP**:
-- The I-D-E cycle MUST be completed IN FULL for EACH PHASE
-- Skipping D (Defend) or E (Evaluate) for ANY phase is a PROTOCOL VIOLATION
-- If you realize you skipped D or E, you MUST:
-  1. STOP immediately
-  2. Go back and complete the missing step(s)
-  3. Get multi-agent review
-  4. Only then continue
 
-**Phase Completion Checklist (ALL REQUIRED)**:
-- [ ] **Implement** - Code written and working
-- [ ] **Defend** - Tests written and passing
-- [ ] **Evaluate** - Multi-agent review (GPT-5 + Gemini Pro) completed
-- [ ] **Commit** - Single atomic commit created
-- [ ] **TodoWrite** - Phase marked as completed in todo list
+### Phase Gate System (MANDATORY)
+
+#### Entry Gate (Before ANY Phase):
+```
+PHASE N ENTRY CHECKLIST:
+□ Previous phase commit verified: git log --oneline -5
+□ TodoWrite created with 4 items:
+  □ "Phase N: Implement X" (in_progress)
+  □ "Phase N: Write tests" (pending)
+  □ "Phase N: Get review" (pending)
+  □ "Phase N: Commit" (pending)
+□ Stated: "Starting Phase N: [Description]"
+```
+
+#### Exit Gate (Before Leaving ANY Phase):
+```
+PHASE N EXIT CHECKLIST:
+□ Tests written and passing (show output)
+□ Review received from 2+ models (show summary)
+□ Commit created (show git log -1)
+□ All 4 TodoWrite items = "completed"
+```
+
+### Violation Recovery Protocol
+If D or E were skipped:
+1. **FULL STOP** - No more code
+2. **ASSESS** - List incomplete phases
+3. **BACKFILL** - Complete missing steps
+4. **VERIFY** - Show test output & reviews
+5. **UPDATE** - Fix TodoWrite status
+6. **DOCUMENT** - Add to lessons learned
+7. **RESUME** - Only when 100% complete
+
+### Visual Phase Tracking Template
+```
+════════════════════════════════════════════════════════════════
+PHASE N: [Feature Name] - STATUS: [Not Started|In Progress|Done]
+════════════════════════════════════════════════════════════════
+
+▶️ IMPLEMENT (Status: ...)
+[Work here]
+
+🛡️ DEFEND (Status: ...)
+[Tests here]
+
+🔍 EVALUATE (Status: ...)
+[Review here]
+
+✅ COMMIT (Status: ...)
+[Commit info]
+
+════════════════════════════════════════════════════════════════
+```
 
 **Phase Completion Process**:
 1. **Implement** - Build the code for this phase

@@ -28,13 +28,37 @@ codev/
    - **Commit**: Single atomic commit before next phase
 4. **Review**: Document lessons in `codev/lessons/`
 
-**⚠️ CRITICAL ENFORCEMENT RULES - VIOLATION = IMMEDIATE FAILURE**:
-- **MANDATORY**: Complete ALL THREE (I-D-E) steps for EACH phase
-- **FORBIDDEN**: Moving to next phase without completing current phase's D and E
-- **REQUIRED**: Tests must be written and passing before Evaluate step
-- **REQUIRED**: Multi-agent review from at least 2 models (GPT-5 + Gemini Pro)
-- **TRACKING**: Use TodoWrite - phase is NOT complete until I-D-E are ALL done
-- **RECOVERY**: If D or E were skipped, MUST go back and complete them immediately
+## ⛔ MANDATORY PHASE GATE PROTOCOL
+
+### BEFORE Starting ANY Phase:
+1. **Verify Previous Phase**: Run `git log --oneline -5` to confirm previous phase commit exists
+2. **Create Phase Todos** (MANDATORY - use TodoWrite with these EXACT 4 items):
+   - "Phase N: Implement [feature]" → mark as "in_progress"
+   - "Phase N: Write tests for [feature]" → mark as "pending"
+   - "Phase N: Get multi-agent review" → mark as "pending"
+   - "Phase N: Commit [feature]" → mark as "pending"
+3. **State Intent**: Say "Starting Phase N Implementation" explicitly
+
+### 🚫 AUTOMATIC STOP CONDITIONS:
+STOP IMMEDIATELY if:
+- Any "Write tests" task is still pending after implementation
+- Any "Get multi-agent review" task is pending after tests
+- Previous phase lacks a git commit
+- You think "I'll write tests later" or "I'll get review later"
+
+### ✅ PHASE COMPLETION CHECKLIST:
+Before ANY phase transition, verify ALL:
+- [ ] Implementation working (show output)
+- [ ] Tests passing (paste `npm test` output)
+- [ ] Review complete (show model feedback)
+- [ ] Commit created (show `git log -1`)
+- [ ] All 4 todos marked "completed"
+
+### 🧠 COGNITIVE BREAK RULE:
+After implementing, you MUST:
+1. State: "Implementation done, switching to test mode"
+2. Check TodoWrite for pending test task
+3. State: "Writing tests for Phase N now"
 
 ## Project Overview
 This is a Todo Manager application built using the SPIDER protocol methodology with both traditional UI and LLM-powered conversational interface.
