@@ -356,7 +356,9 @@ export function StreamingConversationalInterface({
 
   // Format message content for display
   const formatMessageContent = (content: ChatMessage['content']): string => {
+    if (!content) return ''
     if (typeof content === 'string') return content
+    if (!Array.isArray(content)) return ''
 
     // Handle array content (tool use, tool results, etc.)
     const textParts = content
