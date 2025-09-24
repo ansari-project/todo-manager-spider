@@ -26,17 +26,12 @@ export class TodoFormatter {
   /**
    * Format a single todo item for display
    */
-  static formatTodo(todo: TodoItem, includeId: boolean = false): string {
+  static formatTodo(todo: TodoItem): string {
     const parts: string[] = []
 
     // Title with status indicator
     const statusIcon = this.getStatusIcon(todo.status)
     parts.push(`${statusIcon} "${todo.title}"`)
-
-    // Include ID if requested
-    if (includeId) {
-      parts.push(`(ID: ${todo.id})`)
-    }
 
     // Priority if not medium
     if (todo.priority !== 'medium') {
@@ -162,12 +157,12 @@ export class TodoFormatter {
 
       // Handle todo or todo list
       if (parsed.id && parsed.title) {
-        // Single todo - include ID when it's a standalone todo
+        // Single todo
         return {
           success: true,
           type: 'todo',
           data: parsed as TodoItem,
-          message: this.formatTodo(parsed as TodoItem, true)
+          message: this.formatTodo(parsed as TodoItem)
         }
       }
 

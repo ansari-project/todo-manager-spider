@@ -45,7 +45,7 @@ describe('Chat API Tool Result Formatting', () => {
       expect(formatted.type).toBe('todo')
       expect(formatted.message).toContain('⭕')
       expect(formatted.message).toContain('New Task')
-      expect(formatted.message).toContain('ID: new-todo')
+      expect(formatted.message).not.toContain('ID:')
     })
 
     it('should handle update_todo results', () => {
