@@ -8,14 +8,26 @@ import { StreamingConversationalInterface } from '../app/components/StreamingCon
 Element.prototype.scrollIntoView = vi.fn()
 
 // Mock fetch for streaming responses
-global.fetch = vi.fn(() =>
-  Promise.resolve({
-    ok: false,
-    status: 500,
-    body: null,
-    headers: new Headers(),
+global.fetch = vi.fn(() => {
+  // Create a mock ReadableStream that immediately closes
+  const mockStream = new ReadableStream({
+    start(controller) {
+      // Send a complete event
+      const encoder = new TextEncoder()
+      controller.enqueue(encoder.encode('data: {"type":"complete","response":"Test response","historyDelta":[]}\n\n'))
+      controller.close()
+    }
+  })
+
+  return Promise.resolve({
+    ok: true,
+    status: 200,
+    body: mockStream,
+    headers: new Headers({
+      'Content-Type': 'text/event-stream'
+    }),
   } as Response)
-)
+})
 
 // Mock ServiceWorkerProvider context
 vi.mock('../app/components/ServiceWorkerProvider', () => ({
@@ -151,7 +163,9 @@ describe('StreamingConversationalInterface with Markdown', () => {
       await waitFor(() => {
         const markdownContent = container.querySelector('[data-testid="markdown-content"]')
         expect(markdownContent).toBeInTheDocument()
-        expect(markdownContent?.className).toContain('prose')
+        // Check that the parent div has prose classes
+        const parentDiv = markdownContent?.parentElement
+        expect(parentDiv?.className).toContain('prose')
       })
     })
 

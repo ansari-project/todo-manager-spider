@@ -42,7 +42,8 @@ describe('Todo API Routes', () => {
       expect(data.message).toBe('Todo operations should be handled client-side')
       expect(data.data).toEqual({
         title: 'Test Todo',
-        priority: 'high'
+        priority: 'high',
+        status: 'pending'
       })
     })
 

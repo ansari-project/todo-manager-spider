@@ -6,13 +6,11 @@ vi.mock('@anthropic-ai/sdk', () => {
   const mockCreate = vi.fn()
   return {
     default: class MockAnthropic {
+      static mockCreate = mockCreate // Expose for test access
       constructor() {
         this.messages = {
           create: mockCreate
         }
-      }
-      static getMockCreate() {
-        return mockCreate
       }
     }
   }
@@ -22,20 +20,20 @@ vi.mock('@anthropic-ai/sdk', () => {
 import { POST as streamPOST } from '@/app/api/chat/stream/route'
 import { POST as continuePOST } from '@/app/api/chat/continue/route'
 
-describe('Add Emojis to Todos Scenario', () => {
-  let mockAnthropicCreate: ReturnType<typeof vi.fn>
+// Get mockCreate from the mock
+import Anthropic from '@anthropic-ai/sdk'
+const mockCreate = (Anthropic as any).mockCreate
 
+describe('Add Emojis to Todos Scenario', () => {
   beforeEach(() => {
     // Reset mocks
     vi.clearAllMocks()
-    // Get the mock function
-    const Anthropic = require('@anthropic-ai/sdk').default
-    mockAnthropicCreate = Anthropic.getMockCreate()
+    mockCreate.mockClear()
   })
 
   it('should handle "add emojis to todos" with two-step tool execution', async () => {
     // Step 1: Initial request should trigger todo_list
-    mockAnthropicCreate.mockResolvedValueOnce({
+    mockCreate.mockResolvedValueOnce({
       content: [
         {
           type: 'text',
@@ -61,26 +59,37 @@ describe('Add Emojis to Todos Scenario', () => {
 
     const response = await streamPOST(request)
     expect(response).toBeDefined()
+    expect(response.body).toBeDefined()
 
     // Read streaming response
     const reader = response.body?.getReader()
+    if (!reader) {
+      throw new Error('No response body reader')
+    }
+
     const decoder = new TextDecoder()
     let toolRequestEvent = null
+    let fullResponse = ''
 
-    while (reader) {
+    while (true) {
       const { done, value } = await reader.read()
       if (done) break
 
-      const chunk = decoder.decode(value)
+      const chunk = decoder.decode(value, { stream: true })
+      fullResponse += chunk
       const lines = chunk.split('\n')
 
       for (const line of lines) {
         if (line.startsWith('data: ')) {
-          const data = line.slice(6)
-          if (data.trim()) {
-            const event = JSON.parse(data)
-            if (event.type === 'tool_request') {
-              toolRequestEvent = event
+          const data = line.slice(6).trim()
+          if (data && data !== '[DONE]') {
+            try {
+              const event = JSON.parse(data)
+              if (event.type === 'tool_request') {
+                toolRequestEvent = event
+              }
+            } catch (e) {
+              // Ignore parse errors for partial chunks
             }
           }
         }
@@ -91,7 +100,7 @@ describe('Add Emojis to Todos Scenario', () => {
     expect(toolRequestEvent.tools[0].name).toBe('todo_list')
 
     // Step 2: After getting todos, Claude should request multiple todo_update calls
-    mockAnthropicCreate.mockResolvedValueOnce({
+    mockCreate.mockResolvedValueOnce({
       content: [
         {
           type: 'text',
@@ -172,14 +181,14 @@ describe('Add Emojis to Todos Scenario', () => {
 
   it('should not use made-up IDs when updating todos', async () => {
     // First call returns todo_list request
-    mockAnthropicCreate.mockResolvedValueOnce({
+    mockCreate.mockResolvedValueOnce({
       content: [
         { type: 'tool_use', id: 'tool-1', name: 'todo_list', input: {} }
       ]
     })
 
     // Second call should use actual IDs from the todo_list response
-    mockAnthropicCreate.mockResolvedValueOnce({
+    mockCreate.mockResolvedValueOnce({
       content: [
         {
           type: 'tool_use',
