@@ -185,7 +185,9 @@ describe('StreamingConversationalInterface with Markdown', () => {
       await waitFor(() => {
         const userMessage = container.querySelector('.bg-blue-500')
         const markdownContent = userMessage?.querySelector('[data-testid="markdown-content"]')
-        expect(markdownContent?.className).toContain('prose-invert')
+        // Check the parent div that has the prose classes
+        const parentDiv = markdownContent?.parentElement
+        expect(parentDiv?.className).toContain('prose-invert')
       })
     })
   })
